@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interpoint</title>
+<style>
+  :root{
+    --navy:#0f2740; --navy2:#16395c; --accent:#1f6feb; --accent2:#0b8a5a;
+    --bg:#f4f6f9; --card:#ffffff; --line:#e2e8f0; --text:#1a2433; --muted:#64748b;
+    --warn:#b54708; --danger:#b42318; --ok:#0b8a5a; --chip:#eef2f7;
+    --shadow:0 1px 3px rgba(15,39,64,.08),0 4px 12px rgba(15,39,64,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  header{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:0 22px;display:flex;align-items:center;gap:14px;height:62px;box-shadow:var(--shadow);position:sticky;top:0;z-index:50}
+  .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#1f6feb,#0b8a5a);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px}
+  header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px;cursor:pointer}
+  header h1 small{display:block;font-size:11px;color:#9db4cc;font-weight:400}
+  nav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  nav button{background:transparent;border:0;color:#cfe0f0;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13.5px;font-weight:500}
+  nav button:hover{background:rgba(255,255,255,.1);color:#fff}
+  nav button.active{background:#fff;color:var(--navy);font-weight:600}
+  .userbox{display:flex;align-items:center;gap:8px;color:#cfe0f0;font-size:12.5px;margin-left:10px}
+  .userbox button{background:rgba(255,255,255,.12);border:0;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+  .userbox button:hover{background:rgba(255,255,255,.22)}
+  .syncdot{width:8px;height:8px;border-radius:50%;background:#41d18b;box-shadow:0 0 0 3px rgba(65,209,139,.25)}
+  .syncdot.off{background:#e0b341;box-shadow:0 0 0 3px rgba(224,179,65,.25)}
+  main{max-width:1300px;margin:22px auto;padding:0 18px}
+  .view{display:none}.view.active{display:block}
+  h2.title{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .n{font-size:28px;font-weight:700;color:var(--navy)}
+  .stat .l{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .stat .bar{height:4px;border-radius:3px;margin-top:10px;background:var(--accent)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+  .panel .ph{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .panel .ph h3{margin:0;font-size:15px}
+  .panel .pb{padding:16px 18px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  input,select,textarea{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(31,111,235,.3);border-color:var(--accent)}
+  textarea{resize:vertical;width:100%}
+  .btn{background:var(--accent);color:#fff;border:0;padding:9px 15px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13.5px}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .btn.ghost:hover{background:#f1f5f9}
+  .btn.green{background:var(--accent2)}
+  .btn.sm{padding:5px 10px;font-size:12.5px}
+  .btn.danger{background:#fff;color:var(--danger);border:1px solid #f3c0bb}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;background:#fafbfc;position:sticky;top:62px}
+  tr:hover td{background:#fafcff}
+  .tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .cat-med{background:#fde8e8;color:#b42318}
+  .cat-hotel{background:#fdf0d5;color:#92600a}
+  .cat-elec{background:#e0edff;color:#1f54c2}
+  .cat-cold{background:#d7f0ea;color:#0b6e4f}
+  .cat-other{background:#eceff3;color:#475569}
+  .st{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:20px}
+  .st-New{background:#eceff3;color:#475569}
+  .st-RFQ{background:#e0edff;color:#1f54c2}
+  .st-Quoted{background:#fdf0d5;color:#92600a}
+  .st-Sampling{background:#ede0ff;color:#6b27c2}
+  .st-Approved{background:#d7f0ea;color:#0b6e4f}
+  .st-Ordered{background:#0b8a5a;color:#fff}
+  .st-Hold{background:#fde8e8;color:#b42318}
+  .muted{color:var(--muted)}.right{text-align:right}.nowrap{white-space:nowrap}
+  .best{color:var(--ok);font-weight:700}
+  .empty{text-align:center;color:var(--muted);padding:36px 12px}
+  .overlay{position:fixed;inset:0;background:rgba(15,39,64,.45);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow:auto;padding:40px 16px}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .modal .mh h3{margin:0;font-size:16px}
+  .modal .mb{padding:18px 20px;max-height:70vh;overflow:auto}
+  .modal .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+  .x{margin-left:auto;background:none;border:0;font-size:22px;cursor:pointer;color:var(--muted);line-height:1}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld label{font-size:12px;font-weight:600;color:var(--muted)}
+  .fld input,.fld select,.fld textarea{width:100%}
+  .hint{font-size:12px;color:var(--muted)}
+  .qrow{background:#fafbfc}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}nav{display:none}.mobnav{display:flex !important}}
+  .mobnav{display:none}
+  .footer{color:var(--muted);font-size:12px;text-align:center;margin:26px 0 14px}
+  details summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:12.5px}
+  /* login */
+  #loginOverlay{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy),var(--navy2));display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+  #loginOverlay.show{display:flex}
+  .login{background:#fff;border-radius:16px;max-width:400px;width:100%;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .login .logo{width:46px;height:46px;font-size:22px;margin-bottom:14px}
+  .login h2{margin:0 0 4px;font-size:21px}
+  .login p{color:var(--muted);margin:0 0 18px;font-size:13px}
+  .login input{width:100%;margin-bottom:10px;padding:11px}
+  .login .btn{width:100%;padding:11px;margin-bottom:8px}
+  #authMsg{font-size:12.5px;margin-top:6px;min-height:16px}
+  .banner{background:#fff4e5;border:1px solid #f0d3a0;color:#92600a;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;display:none}
+  .banner.show{display:block}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+  <div class="login">
+    <div class="logo">I</div>
+    <h2>Interpoint</h2>
+    <p>China → Europe sourcing workspace. Sign in to your team account.</p>
+    <input id="au_email" type="email" placeholder="Email" autocomplete="username">
+    <input id="au_pw" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn" onclick="doAuth('signin')">Sign in</button>
+    <button class="btn ghost" onclick="doAuth('signup')">Create account</button>
+    <div id="authMsg" class="muted"></div>
+  </div>
+</div>
+
+<div id="appWrap" style="display:none">
+<header>
+  <div class="logo" id="logoBox">I</div>
+  <h1 id="brandTitle" title="Click to rename">Interpoint<small id="brandSub">China → Europe sourcing</small></h1>
+  <nav id="nav">
+    <button data-v="dash" class="active">Dashboard</button>
+    <button data-v="products">Products</button>
+    <button data-v="suppliers">Suppliers</button>
+    <button data-v="buyers">Buyers</button>
+    <button data-v="data">Import / Export</button>
+  </nav>
+  <div class="userbox">
+    <span class="syncdot" id="syncdot" title="Live sync"></span>
+    <span style="color:#9db4cc">Live</span>
+  </div>
+</header>
+<select class="mobnav" id="mobnav" style="margin:10px auto;display:block;max-width:90%" onchange="show(this.value)">
+  <option value="dash">Dashboard</option><option value="products">Products</option>
+  <option value="suppliers">Suppliers</option><option value="buyers">Buyers</option>
+  <option value="data">Import / Export</option>
+</select>
+
+<main>
+  <div class="banner" id="errBanner"></div>
+
+  <section id="v-dash" class="view active">
+    <h2 class="title">Dashboard</h2>
+    <p class="sub">Live overview — shared with your whole team in real time.</p>
+    <div class="cards" id="statCards"></div>
+    <div class="panel"><div class="ph"><h3>Pipeline by status</h3></div><div class="pb" id="pipeline"></div></div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><h3>Products needing action</h3><span class="muted" style="margin-left:auto;font-size:12px">New / RFQ, no quote yet</span></div><div class="pb" style="padding:0"><div id="todo"></div></div></div>
+      <div class="panel"><div class="ph"><h3>By category</h3></div><div class="pb" id="byCat"></div></div>
+    </div>
+  </section>
+
+  <section id="v-products" class="view">
+    <h2 class="title">Products to source</h2>
+    <p class="sub">Master list. Log quotes from multiple suppliers — the cheapest is highlighted automatically.</p>
+    <div class="toolbar">
+      <button class="btn" onclick="openProduct()">+ Add product</button>
+      <input id="psearch" placeholder="Search name / ref / specs…" oninput="renderProducts()" style="flex:1;min-width:160px">
+      <select id="pcat" onchange="renderProducts()"><option value="">All categories</option></select>
+      <select id="pstat" onchange="renderProducts()"><option value="">All statuses</option></select>
+      <select id="pbuyer" onchange="renderProducts()"><option value="">All buyers</option></select>
+    </div>
+    <div class="panel"><div class="pb" style="padding:0;overflow:auto">
+      <table><thead><tr><th>Ref</th><th>Product</th><th>Category</th><th>Buyer</th><th class="right">Qty</th><th class="right">Target</th><th class="right">Best quote</th><th>Status</th><th></th></tr></thead>
+      <tbody id="pbody"></tbody></table><div id="pempty"></div></div></div>
+  </section>
+
+  <section id="v-suppliers" class="view">
+    <h2 class="title">Suppliers</h2><p class="sub">Your Chinese supplier contacts and the categories they cover.</p>
+    <div class="toolbar"><button class="btn" onclick="openSupplier()">+ Add supplier</button>
+      <input id="ssearch" placeholder="Search supplier…" oninput="renderSuppliers()" style="flex:1;min-width:160px"></div>
+    <div class="panel"><div class="pb" style="padding:0;overflow:auto">
+      <table><thead><tr><th>Supplier</th><th>Category</th><th>Location</th><th>Contact</th><th class="right">Quotes</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="sbody"></tbody></table><div id="sempty"></div></div></div>
+  </section>
+
+  <section id="v-buyers" class="view">
+    <h2 class="title">Buyers</h2><p class="sub">Your European clients and the products assigned to each.</p>
+    <div class="toolbar"><button class="btn" onclick="openBuyer()">+ Add buyer</button></div>
+    <div class="panel"><div class="pb" style="padding:0;overflow:auto">
+      <table><thead><tr><th>Buyer</th><th>Country</th><th>Contact</th><th class="right">Products</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="bbody"></tbody></table><div id="bempty"></div></div></div>
+  </section>
+
+  <section id="v-data" class="view">
+    <h2 class="title">Import / Export</h2><p class="sub">Add more products in bulk, or export a buyer quote sheet.</p>
+    <div class="panel"><div class="ph"><h3>① Import more products (paste from Excel)</h3></div><div class="pb">
+      <p class="hint" style="margin-top:0">Copy rows in Excel, paste below. Columns in order: <b>Ref · Product · Category · Qty · Target price · Specs</b>.</p>
+      <textarea id="importBox" rows="6" placeholder="Paste tab- or comma-separated rows…"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <label class="hint"><input type="checkbox" id="hasHeader" checked> First row is a header</label>
+        <select id="impCat" style="margin-left:auto"></select><span class="hint">Default category if blank</span>
+        <button class="btn green" id="impBtn" onclick="doImport()">Import to cloud</button>
+      </div>
+      <div id="impResult" class="hint" style="margin-top:8px"></div>
+    </div></div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><h3>② Export buyer quote sheet</h3></div><div class="pb">
+        <p class="hint" style="margin-top:0">Download a CSV with each product + its best quote.</p>
+        <select id="expBuyer" style="margin-bottom:10px;width:100%"></select>
+        <button class="btn" onclick="exportQuoteSheet()">⬇ Download quote sheet (CSV)</button></div></div>
+      <div class="panel"><div class="ph"><h3>③ Backup</h3></div><div class="pb">
+        <p class="hint" style="margin-top:0">Your data lives in the cloud. Download a snapshot anytime.</p>
+        <button class="btn ghost" onclick="backup()">⬇ Download backup (.json)</button></div></div>
+    </div>
+  </section>
+  <div class="footer">Connected to your team workspace · <span id="savedStamp"></span></div>
+</main>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal">
+  <div class="mh"><h3 id="mTitle">Edit</h3><button class="x" onclick="closeModal()">×</button></div>
+  <div class="mb" id="mBody"></div><div class="mf" id="mFoot"></div>
+</div></div>
+
+<script>
+/* ---------- config ---------- */
+const SUPABASE_URL="https://awhijbgonnmbmymvbzlb.supabase.co";
+const SUPABASE_KEY="sb_publishable_0gCzyKbXWiWj-UCvyI9mXg_ixERRH0B";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CATS=[{k:"Medical",cls:"cat-med"},{k:"Hotel Furniture & Supply",cls:"cat-hotel"},{k:"Electronics",cls:"cat-elec"},{k:"Cold Storage",cls:"cat-cold"},{k:"Other",cls:"cat-other"}];
+const STATUSES=["New","RFQ","Quoted","Sampling","Approved","Ordered","Hold"];
+const STLABEL={New:"New",RFQ:"RFQ sent",Quoted:"Quoted",Sampling:"Sampling",Approved:"Approved",Ordered:"Ordered",Hold:"On hold"};
+let S={brand:"Interpoint",brandSub:"China → Europe sourcing",products:[],suppliers:[],buyers:[],quotes:[]};
+
+const uid=p=>(p||'')+Math.random().toString(36).slice(2,9);
+const catCls=k=>(CATS.find(c=>c.k===k)||CATS[4]).cls;
+const esc=s=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=v=>{if(v===null||v===undefined||v==="")return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?null:n};
+const money=n=>n==null?"—":"€"+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const val=i=>document.getElementById(i).value.trim();
+
+/* ---------- row mapping ---------- */
+const prodFromRow=r=>({id:r.id,ref:r.ref,name:r.name,category:r.category,buyerId:r.buyer_id||'',qty:r.qty,target:r.target,specs:r.specs,status:r.status||'New',notes:r.notes});
+const prodToRow=p=>({id:p.id,ref:p.ref||null,name:p.name,category:p.category,buyer_id:p.buyerId||null,qty:p.qty,target:p.target,specs:p.specs||null,status:p.status,notes:p.notes||null});
+const quoteFromRow=r=>({id:r.id,productId:r.product_id,supplierId:r.supplier_id||'',price:r.price,moq:r.moq,lead:r.lead,incoterm:r.incoterm,sample:r.sample,notes:r.notes});
+const quoteToRow=q=>({id:q.id,product_id:q.productId,supplier_id:q.supplierId||null,price:q.price,moq:q.moq,lead:q.lead||null,incoterm:q.incoterm||null,sample:q.sample,notes:q.notes||null});
+const buyerToRow=b=>({id:b.id,name:b.name,country:b.country||null,contact:b.contact||null,notes:b.notes||null});
+const supToRow=s=>({id:s.id,name:s.name,category:s.category||null,location:s.location||null,contact:s.contact||null,notes:s.notes||null});
+
+/* ---------- helpers ---------- */
+function bestQuote(pid){const qs=S.quotes.filter(q=>q.productId===pid&&q.price!=null);if(!qs.length)return null;return qs.reduce((a,b)=>b.price<a.price?b:a)}
+function supName(id){const s=S.suppliers.find(x=>x.id===id);return s?s.name:"—"}
+function buyerName(id){const b=S.buyers.find(x=>x.id===id);return b?b.name:""}
+function upsertLocal(tbl,obj){const a=S[tbl];const i=a.findIndex(x=>x.id===obj.id);if(i>=0)a[i]=obj;else a.push(obj)}
+function removeLocal(tbl,id){S[tbl]=S[tbl].filter(x=>x.id!==id)}
+function err(msg){const b=document.getElementById('errBanner');if(!msg){b.classList.remove('show');return}b.textContent=msg;b.classList.add('show')}
+function stamp(){document.getElementById('savedStamp').textContent="Updated "+new Date().toLocaleTimeString()}
+
+/* ---------- auth ---------- */
+async function doAuth(mode){
+  const email=val('au_email'),pw=val('au_pw');const m=document.getElementById('authMsg');
+  if(!email||!pw){m.textContent='Enter email and password.';m.style.color='var(--danger)';return}
+  m.style.color='var(--muted)';m.textContent='Working…';
+  let res;
+  if(mode==='signup')res=await db.auth.signUp({email,password:pw});
+  else res=await db.auth.signInWithPassword({email,password:pw});
+  if(res.error){m.style.color='var(--danger)';m.textContent=res.error.message;return}
+  if(mode==='signup'&&!res.data.session){m.style.color='var(--ok)';m.textContent='Account created. If email confirmation is on, check your inbox, then sign in.';return}
+}
+async function logout(){await db.auth.signOut()}
+
+let booted=false,channel=null;
+async function enterApp(){
+  document.getElementById('loginOverlay').classList.remove('show');
+  document.getElementById('appWrap').style.display='';
+  const {data:{user}}=await db.auth.getUser();
+  document.getElementById('userEmail').textContent=user?user.email:'';
+  if(!booted){booted=true;await loadAll();subscribe();}
+}
+function showLogin(){
+  booted=false;if(channel){db.removeChannel(channel);channel=null}
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('appWrap').style.display='none';
+}
+/* login disabled — workspace opens directly */
+
+/* ---------- data load ---------- */
+async function fetchAll(table,mapFn){
+  const out=[];const size=1000;let from=0;
+  while(true){
+    const {data,error}=await db.from(table).select('*').range(from,from+size-1);
+    if(error)throw error;
+    out.push(...(mapFn?data.map(mapFn):data));
+    if(data.length<size)break;from+=size;
+  }
+  return out;
+}
+async function loadAll(){
+  try{
+    err('');
+    const [prod,sup,buy,quo,setq]=await Promise.all([
+      fetchAll('products',prodFromRow),
+      fetchAll('suppliers'),
+      fetchAll('buyers'),
+      fetchAll('quotes',quoteFromRow),
+      db.from('settings').select('*').eq('id','app')
+    ]);
+    S.products=prod;S.suppliers=sup;S.buyers=buy;S.quotes=quo;
+    if(setq.data&&setq.data[0]){S.brand=setq.data[0].brand||S.brand;S.brandSub=setq.data[0].brand_sub||S.brandSub}
+    renderAll();stamp();
+  }catch(e){
+    err('Could not load data: '+e.message+'  — have you run schema.sql and imported products.csv in Supabase?');
+  }
+}
+let rt;function debouncedRender(){clearTimeout(rt);rt=setTimeout(()=>{renderAll();stamp()},150)}
+function subscribe(){
+  channel=db.channel('ws')
+    .on('postgres_changes',{event:'*',schema:'public'},payload=>{
+      const t=payload.table;
+      if(['products','suppliers','buyers','quotes'].includes(t)){
+        const map=t==='products'?prodFromRow:t==='quotes'?quoteFromRow:(x=>x);
+        if(payload.eventType==='DELETE'){removeLocal(t,payload.old.id)}
+        else{upsertLocal(t,map(payload.new))}
+      }else if(t==='settings'&&payload.new){S.brand=payload.new.brand;S.brandSub=payload.new.brand_sub}
+      debouncedRender();
+    })
+    .subscribe(status=>{document.getElementById('syncdot').classList.toggle('off',status!=='SUBSCRIBED')});
+}
+
+/* ---------- navigation ---------- */
+function show(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  document.getElementById('mobnav').value=v;window.scrollTo(0,0);
+  if(v==='dash')renderDash();
+}
+document.getElementById('nav').addEventListener('click',e=>{if(e.target.dataset.v)show(e.target.dataset.v)});
+
+/* ---------- render: dashboard ---------- */
+function renderAll(){fillFilters();paintBrand();renderProducts();renderSuppliers();renderBuyers();renderDash()}
+function renderDash(){
+  const p=S.products;
+  const quoted=p.filter(x=>bestQuote(x.id)).length;
+  const valQ=p.reduce((s,x)=>{const b=bestQuote(x.id);return s+(b&&x.qty?b.price*x.qty:0)},0);
+  const cards=[[p.length,"Products","--accent"],[S.suppliers.length,"Suppliers","--accent2"],[S.buyers.length,"Buyers","--navy"],
+    [quoted,"Products with a quote","--warn"],[S.quotes.length,"Quotes logged","--accent"],[money(valQ),"Best-quote order value","--accent2"]];
+  document.getElementById('statCards').innerHTML=cards.map(c=>`<div class="stat"><div class="n">${c[0]}</div><div class="l">${c[1]}</div><div class="bar" style="background:var(${c[2]})"></div></div>`).join('');
+  const counts={};STATUSES.forEach(s=>counts[s]=0);p.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
+  const max=Math.max(1,...Object.values(counts));
+  document.getElementById('pipeline').innerHTML=STATUSES.map(s=>`<div style="display:flex;align-items:center;gap:10px;margin:7px 0"><span class="st st-${s}" style="min-width:84px;text-align:center">${STLABEL[s]}</span><div style="flex:1;background:#eef2f7;border-radius:6px;height:18px;overflow:hidden"><div style="height:100%;width:${counts[s]/max*100}%;background:var(--accent);min-width:${counts[s]?'22px':'0'};border-radius:6px"></div></div><b style="min-width:26px;text-align:right">${counts[s]}</b></div>`).join('');
+  const todo=p.filter(x=>(x.status==='New'||x.status==='RFQ')&&!bestQuote(x.id)).slice(0,8);
+  document.getElementById('todo').innerHTML=todo.length?`<table><tbody>${todo.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="muted" style="font-size:12px">${esc(x.ref||'')}</div></td><td><span class="tag ${catCls(x.category)}">${esc(x.category)}</span></td><td class="right"><button class="btn sm ghost" onclick="openProduct('${x.id}')">Open</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">Nothing pending. 🎉</div>`;
+  const cc={};p.forEach(x=>cc[x.category]=(cc[x.category]||0)+1);
+  document.getElementById('byCat').innerHTML=CATS.filter(c=>cc[c.k]).map(c=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="tag ${c.cls}" style="min-width:150px">${c.k}</span><b>${cc[c.k]}</b><span class="muted">products</span></div>`).join('')||'<div class="empty">No products yet.</div>';
+}
+
+/* ---------- render: products ---------- */
+function fillFilters(){
+  const sel=id=>document.getElementById(id);
+  sel('pcat').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${c.k}</option>`).join('');
+  sel('impCat').innerHTML=CATS.map(c=>`<option>${c.k}</option>`).join('');
+  sel('pstat').innerHTML='<option value="">All statuses</option>'+STATUSES.map(s=>`<option value="${s}">${STLABEL[s]}</option>`).join('');
+  sel('pbuyer').innerHTML='<option value="">All buyers</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  sel('expBuyer').innerHTML='<option value="">All buyers (full list)</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+}
+function renderProducts(){
+  const q=(document.getElementById('psearch').value||'').toLowerCase();
+  const fc=document.getElementById('pcat').value,fs=document.getElementById('pstat').value,fb=document.getElementById('pbuyer').value;
+  let rows=S.products.filter(p=>{
+    if(fc&&p.category!==fc)return false;if(fs&&p.status!==fs)return false;if(fb&&p.buyerId!==fb)return false;
+    if(q&&!((p.name+' '+(p.ref||'')+' '+(p.specs||'')).toLowerCase().includes(q)))return false;return true;});
+  const CAP=300,shown=rows.slice(0,CAP);
+  document.getElementById('pbody').innerHTML=shown.map(p=>{
+    const b=bestQuote(p.id);const qs=S.quotes.filter(q=>q.productId===p.id);
+    return `<tr><td class="nowrap muted">${esc(p.ref||'')}</td>
+      <td><b>${esc(p.name)}</b>${p.specs?`<div class="muted" style="font-size:12px;max-width:280px">${esc(p.specs)}</div>`:''}${qs.length?`<details><summary>${qs.length} quote${qs.length>1?'s':''}</summary>${quotesTable(p.id)}</details>`:''}</td>
+      <td><span class="tag ${catCls(p.category)}">${esc(p.category)}</span></td><td>${esc(buyerName(p.buyerId))}</td>
+      <td class="right">${p.qty?Number(p.qty).toLocaleString():'—'}</td><td class="right muted">${p.target!=null?money(p.target):'—'}</td>
+      <td class="right ${b?'best':''}">${b?money(b.price):'—'}${b?`<div class="muted" style="font-size:11px;font-weight:400">${esc(supName(b.supplierId))}</div>`:''}</td>
+      <td><span class="st st-${p.status}">${STLABEL[p.status]}</span></td>
+      <td class="nowrap right"><button class="btn sm ghost" onclick="openProduct('${p.id}')">Edit</button> <button class="btn sm green" onclick="openQuote('${p.id}')">+ Quote</button></td></tr>`;}).join('');
+  document.getElementById('pempty').innerHTML=!rows.length?`<div class="empty">No products match.</div>`:(rows.length>CAP?`<div class="empty">Showing first ${CAP} of <b>${rows.length}</b> matches — refine the search or filters to narrow down.</div>`:'');
+}
+function quotesTable(pid){
+  const b=bestQuote(pid);const qs=S.quotes.filter(q=>q.productId===pid).sort((a,b)=>(a.price??1e9)-(b.price??1e9));
+  return `<table style="margin-top:6px"><thead><tr><th>Supplier</th><th class="right">Price</th><th class="right">MOQ</th><th>Lead</th><th>Incoterm</th><th>Sample</th><th></th></tr></thead><tbody>${qs.map(q=>`<tr class="qrow"><td>${esc(supName(q.supplierId))}</td><td class="right ${b&&q.id===b.id?'best':''}">${q.price!=null?money(q.price):'—'}</td><td class="right">${q.moq||'—'}</td><td>${esc(q.lead||'—')}</td><td>${esc(q.incoterm||'—')}</td><td>${q.sample!=null?money(q.sample):'—'}</td><td class="right"><button class="btn sm ghost" onclick="openQuote('${pid}','${q.id}')">Edit</button> <button class="btn sm danger" onclick="delQuote('${q.id}')">✕</button></td></tr>${q.notes?`<tr class="qrow"><td colspan="7" class="muted" style="font-size:12px">${esc(q.notes)}</td></tr>`:''}`).join('')}</tbody></table>`;
+}
+
+/* ---------- modal ---------- */
+function openModal(t,b,f){document.getElementById('mTitle').textContent=t;document.getElementById('mBody').innerHTML=b;document.getElementById('mFoot').innerHTML=f;document.getElementById('overlay').classList.add('show')}
+function closeModal(){document.getElementById('overlay').classList.remove('show')}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal()});
+
+/* ---------- product CRUD ---------- */
+function openProduct(id){
+  const p=id?S.products.find(x=>x.id===id):{id:null,name:'',ref:'',category:'Medical',buyerId:'',qty:'',target:'',specs:'',status:'New',notes:''};
+  const body=`<div class="fld"><label>Product name *</label><input id="f_name" value="${esc(p.name)}"></div>
+    <div class="grid3"><div class="fld"><label>Reference</label><input id="f_ref" value="${esc(p.ref||'')}"></div>
+    <div class="fld"><label>Category</label><select id="f_cat">${CATS.map(c=>`<option ${c.k===p.category?'selected':''}>${c.k}</option>`).join('')}</select></div>
+    <div class="fld"><label>Status</label><select id="f_status">${STATUSES.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STLABEL[s]}</option>`).join('')}</select></div></div>
+    <div class="grid3"><div class="fld"><label>Buyer</label><select id="f_buyer"><option value="">— none —</option>${S.buyers.map(b=>`<option value="${b.id}" ${b.id===p.buyerId?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+    <div class="fld"><label>Quantity</label><input id="f_qty" value="${esc(p.qty)}"></div>
+    <div class="fld"><label>Target price (€)</label><input id="f_target" value="${esc(p.target)}"></div></div>
+    <div class="fld"><label>Specs / requirements</label><textarea id="f_specs" rows="2">${esc(p.specs||'')}</textarea></div>
+    <div class="fld"><label>Notes</label><textarea id="f_notes" rows="2">${esc(p.notes||'')}</textarea></div>`;
+  const foot=`${id?`<button class="btn danger" style="margin-right:auto" onclick="delProduct('${id}')">Delete</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveProduct('${id||''}')">${id?'Save':'Add product'}</button>`;
+  openModal(id?'Edit product':'Add product',body,foot);setTimeout(()=>document.getElementById('f_name').focus(),50);
+}
+async function saveProduct(id){
+  const name=val('f_name');if(!name){alert('Product name is required');return}
+  const p={id:id||uid('p'),name,ref:val('f_ref'),category:val('f_cat'),status:val('f_status'),buyerId:val('f_buyer'),qty:num(val('f_qty')),target:num(val('f_target')),specs:val('f_specs'),notes:val('f_notes')};
+  const {error}=await db.from('products').upsert(prodToRow(p));
+  if(error){alert('Save failed: '+error.message);return}
+  upsertLocal('products',p);closeModal();renderAll();
+}
+async function delProduct(id){
+  if(!confirm('Delete this product and its quotes?'))return;
+  const {error}=await db.from('products').delete().eq('id',id);
+  if(error){alert('Delete failed: '+error.message);return}
+  removeLocal('products',id);S.quotes=S.quotes.filter(q=>q.productId!==id);closeModal();renderAll();
+}
+
+/* ---------- quote CRUD ---------- */
+function openQuote(pid,qid){
+  if(!S.suppliers.length){if(confirm('Add a supplier first?')){closeModal();show('suppliers');openSupplier()}return}
+  const p=S.products.find(x=>x.id===pid);
+  const q=qid?S.quotes.find(x=>x.id===qid):{supplierId:S.suppliers[0].id,price:'',moq:'',lead:'',incoterm:'FOB',sample:'',notes:''};
+  const body=`<p class="hint" style="margin-top:0">Quote for <b>${esc(p.name)}</b></p>
+    <div class="grid2"><div class="fld"><label>Supplier *</label><select id="q_sup">${S.suppliers.map(s=>`<option value="${s.id}" ${s.id===q.supplierId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+    <div class="fld"><label>Unit price (€) *</label><input id="q_price" value="${esc(q.price)}"></div></div>
+    <div class="grid3"><div class="fld"><label>MOQ</label><input id="q_moq" value="${esc(q.moq)}"></div>
+    <div class="fld"><label>Lead time</label><input id="q_lead" value="${esc(q.lead||'')}"></div>
+    <div class="fld"><label>Incoterm</label><select id="q_inc">${['EXW','FOB','CIF','DDP'].map(i=>`<option ${i===q.incoterm?'selected':''}>${i}</option>`).join('')}</select></div></div>
+    <div class="grid2"><div class="fld"><label>Sample cost (€)</label><input id="q_sample" value="${esc(q.sample)}"></div></div>
+    <div class="fld"><label>Notes</label><textarea id="q_notes" rows="2">${esc(q.notes||'')}</textarea></div>`;
+  const foot=`${qid?`<button class="btn danger" style="margin-right:auto" onclick="delQuote('${qid}',true)">Delete</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn green" onclick="saveQuote('${pid}','${qid||''}')">${qid?'Save quote':'Add quote'}</button>`;
+  openModal(qid?'Edit quote':'Add quote',body,foot);
+}
+async function saveQuote(pid,qid){
+  const price=num(val('q_price'));if(price==null){alert('Unit price is required');return}
+  const q={id:qid||uid('q'),productId:pid,supplierId:val('q_sup'),price,moq:num(val('q_moq')),lead:val('q_lead'),incoterm:val('q_inc'),sample:num(val('q_sample')),notes:val('q_notes')};
+  const {error}=await db.from('quotes').upsert(quoteToRow(q));
+  if(error){alert('Save failed: '+error.message);return}
+  upsertLocal('quotes',q);
+  const p=S.products.find(x=>x.id===pid);
+  if(p&&p.status==='New'){p.status='Quoted';await db.from('products').update({status:'Quoted'}).eq('id',pid)}
+  closeModal();renderAll();
+}
+async function delQuote(qid,fromModal){
+  if(!confirm('Delete this quote?'))return;
+  const {error}=await db.from('quotes').delete().eq('id',qid);
+  if(error){alert('Delete failed: '+error.message);return}
+  removeLocal('quotes',qid);if(fromModal)closeModal();renderAll();
+}
+
+/* ---------- supplier CRUD ---------- */
+function renderSuppliers(){
+  const q=(document.getElementById('ssearch').value||'').toLowerCase();
+  const rows=S.suppliers.filter(s=>!q||((s.name+' '+(s.location||'')+' '+(s.category||'')).toLowerCase().includes(q)));
+  document.getElementById('sbody').innerHTML=rows.map(s=>{const qc=S.quotes.filter(x=>x.supplierId===s.id).length;
+    return `<tr><td><b>${esc(s.name)}</b></td><td>${s.category?`<span class="tag ${catCls(s.category)}">${esc(s.category)}</span>`:'<span class="muted">—</span>'}</td><td>${esc(s.location||'—')}</td><td class="muted" style="font-size:12.5px">${esc(s.contact||'—')}</td><td class="right">${qc}</td><td class="muted" style="font-size:12.5px;max-width:240px">${esc(s.notes||'')}</td><td class="right"><button class="btn sm ghost" onclick="openSupplier('${s.id}')">Edit</button></td></tr>`}).join('');
+  document.getElementById('sempty').innerHTML=rows.length?'':'<div class="empty">No suppliers yet.</div>';
+}
+function openSupplier(id){
+  const s=id?S.suppliers.find(x=>x.id===id):{name:'',category:'',location:'',contact:'',notes:''};
+  const body=`<div class="fld"><label>Supplier / factory name *</label><input id="s_name" value="${esc(s.name)}"></div>
+    <div class="grid2"><div class="fld"><label>Main category</label><select id="s_cat"><option value="">—</option>${CATS.map(c=>`<option ${c.k===s.category?'selected':''}>${c.k}</option>`).join('')}</select></div>
+    <div class="fld"><label>Location</label><input id="s_loc" value="${esc(s.location||'')}"></div></div>
+    <div class="fld"><label>Contact (person, WeChat, email, phone)</label><input id="s_contact" value="${esc(s.contact||'')}"></div>
+    <div class="fld"><label>Notes (certifications, verification…)</label><textarea id="s_notes" rows="3">${esc(s.notes||'')}</textarea></div>`;
+  const foot=`${id?`<button class="btn danger" style="margin-right:auto" onclick="delSupplier('${id}')">Delete</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveSupplier('${id||''}')">${id?'Save':'Add supplier'}</button>`;
+  openModal(id?'Edit supplier':'Add supplier',body,foot);
+}
+async function saveSupplier(id){
+  const name=val('s_name');if(!name){alert('Name required');return}
+  const s={id:id||uid('s'),name,category:val('s_cat'),location:val('s_loc'),contact:val('s_contact'),notes:val('s_notes')};
+  const {error}=await db.from('suppliers').upsert(supToRow(s));
+  if(error){alert('Save failed: '+error.message);return}
+  upsertLocal('suppliers',s);closeModal();renderAll();
+}
+async function delSupplier(id){
+  if(!confirm('Delete supplier?'))return;
+  const {error}=await db.from('suppliers').delete().eq('id',id);
+  if(error){alert('Delete failed: '+error.message);return}
+  removeLocal('suppliers',id);closeModal();renderAll();
+}
+
+/* ---------- buyer CRUD ---------- */
+function renderBuyers(){
+  document.getElementById('bbody').innerHTML=S.buyers.map(b=>{const pc=S.products.filter(p=>p.buyerId===b.id).length;
+    return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.country||'—')}</td><td class="muted" style="font-size:12.5px">${esc(b.contact||'—')}</td><td class="right">${pc}</td><td class="muted" style="font-size:12.5px;max-width:260px">${esc(b.notes||'')}</td><td class="right"><button class="btn sm ghost" onclick="openBuyer('${b.id}')">Edit</button></td></tr>`}).join('');
+  document.getElementById('bempty').innerHTML=S.buyers.length?'':'<div class="empty">No buyers yet.</div>';
+}
+function openBuyer(id){
+  const b=id?S.buyers.find(x=>x.id===id):{name:'',country:'',contact:'',notes:''};
+  const body=`<div class="fld"><label>Buyer / company *</label><input id="b_name" value="${esc(b.name)}"></div>
+    <div class="grid2"><div class="fld"><label>Country</label><input id="b_country" value="${esc(b.country||'')}"></div>
+    <div class="fld"><label>Contact</label><input id="b_contact" value="${esc(b.contact||'')}"></div></div>
+    <div class="fld"><label>Notes</label><textarea id="b_notes" rows="3">${esc(b.notes||'')}</textarea></div>`;
+  const foot=`${id?`<button class="btn danger" style="margin-right:auto" onclick="delBuyer('${id}')">Delete</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveBuyer('${id||''}')">${id?'Save':'Add buyer'}</button>`;
+  openModal(id?'Edit buyer':'Add buyer',body,foot);
+}
+async function saveBuyer(id){
+  const name=val('b_name');if(!name){alert('Name required');return}
+  const b={id:id||uid('b'),name,country:val('b_country'),contact:val('b_contact'),notes:val('b_notes')};
+  const {error}=await db.from('buyers').upsert(buyerToRow(b));
+  if(error){alert('Save failed: '+error.message);return}
+  upsertLocal('buyers',b);closeModal();renderAll();
+}
+async function delBuyer(id){
+  if(!confirm('Delete buyer? Products become unassigned.'))return;
+  const {error}=await db.from('buyers').delete().eq('id',id);
+  if(error){alert('Delete failed: '+error.message);return}
+  removeLocal('buyers',id);S.products.forEach(p=>{if(p.buyerId===id)p.buyerId=''});closeModal();renderAll();
+}
+
+/* ---------- import / export ---------- */
+function splitRow(line){return line.includes('\t')?line.split('\t'):line.split(',').map(c=>c.replace(/^"|"$/g,''))}
+async function doImport(){
+  const raw=document.getElementById('importBox').value.trim();const res=document.getElementById('impResult');
+  if(!raw){res.textContent='Paste some rows first.';return}
+  let lines=raw.split(/\r?\n/).filter(l=>l.trim());
+  if(document.getElementById('hasHeader').checked)lines=lines.slice(1);
+  const defCat=document.getElementById('impCat').value;const rows=[];
+  lines.forEach(l=>{const c=splitRow(l);const name=(c[1]||c[0]||'').trim();if(!name)return;
+    let cat=(c[2]||'').trim();const m=CATS.find(x=>cat&&x.k.toLowerCase().startsWith(cat.toLowerCase()));cat=m?m.k:defCat;
+    rows.push({id:uid('p'),name,ref:(c[0]||'').trim(),category:cat,buyerId:'',qty:num(c[3]),target:num(c[4]),specs:(c[5]||'').trim(),status:'New',notes:''});});
+  if(!rows.length){res.textContent='No valid rows found.';return}
+  document.getElementById('impBtn').disabled=true;res.textContent='Uploading '+rows.length+' rows…';
+  try{
+    for(let i=0;i<rows.length;i+=500){const {error}=await db.from('products').upsert(rows.slice(i,i+500).map(prodToRow));if(error)throw error;}
+    rows.forEach(r=>upsertLocal('products',r));renderAll();
+    res.innerHTML=`<b style="color:var(--ok)">✓ Imported ${rows.length} products to the cloud.</b>`;
+    document.getElementById('importBox').value='';
+  }catch(e){res.innerHTML=`<b style="color:var(--danger)">Import failed: ${esc(e.message)}</b>`}
+  document.getElementById('impBtn').disabled=false;
+}
+function csvCell(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function download(name,content,type){const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function exportQuoteSheet(){
+  const bid=document.getElementById('expBuyer').value;const rows=S.products.filter(p=>!bid||p.buyerId===bid);
+  const head=['Ref','Product','Category','Specs','Qty','Target price (EUR)','Best price (EUR)','Best supplier','MOQ','Lead time','Incoterm','Line total (EUR)','Status'];
+  const lines=[head.join(',')];
+  rows.forEach(p=>{const b=bestQuote(p.id);lines.push([p.ref,p.name,p.category,p.specs,p.qty,p.target,b?b.price:'',b?supName(b.supplierId):'',b?b.moq:'',b?b.lead:'',b?b.incoterm:'',(b&&p.qty)?(b.price*p.qty).toFixed(2):'',STLABEL[p.status]].map(csvCell).join(','))});
+  download('quote-sheet'+(bid?'-'+buyerName(bid).replace(/\W+/g,'_'):'')+'.csv','﻿'+lines.join('\r\n'),'text/csv');
+}
+function backup(){download('interpoint-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S,null,2),'application/json')}
+
+/* ---------- brand ---------- */
+document.getElementById('brandTitle').addEventListener('click',async()=>{
+  const n=prompt('Company / brand name:',S.brand);if(n===null)return;
+  const sub=prompt('Tagline:',S.brandSub);
+  S.brand=n.trim()||S.brand;if(sub!==null)S.brandSub=sub.trim();
+  await db.from('settings').upsert({id:'app',brand:S.brand,brand_sub:S.brandSub});paintBrand();
+});
+function paintBrand(){
+  document.getElementById('brandTitle').childNodes[0].nodeValue=S.brand;
+  document.getElementById('brandSub').textContent=S.brandSub;
+  document.getElementById('logoBox').textContent=(S.brand[0]||'I').toUpperCase();
+  document.title=S.brand;
+}
+
+/* ---------- start ---------- */
+document.getElementById('appWrap').style.display='';
+loadAll().then(subscribe);
+</script>
+</body>
+</html>
