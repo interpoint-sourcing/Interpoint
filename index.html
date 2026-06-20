@@ -169,7 +169,7 @@
       <select id="pbuyer" onchange="renderProducts()"><option value="">All buyers</option></select>
     </div>
     <div class="panel"><div class="pb" style="padding:0;overflow:auto">
-      <table><thead><tr><th>Ref</th><th>Product</th><th>Category</th><th>Buyer</th><th class="right">Qty</th><th class="right">Target</th><th class="right">Best quote</th><th>Status</th><th></th></tr></thead>
+      <table><thead><tr><th>Ref</th><th>Product</th><th>Category</th><th>Buyer</th><th class="right">Qty</th><th class="right">Target price</th><th class="right">Best quote</th><th class="right">Min. order</th><th>Status</th><th></th></tr></thead>
       <tbody id="pbody"></tbody></table><div id="pempty"></div></div></div>
   </section>
 
@@ -202,12 +202,23 @@
       </div>
       <div id="impResult" class="hint" style="margin-top:8px"></div>
     </div></div>
+    <div class="panel"><div class="ph"><h3>② Build a supplier RFQ list (random selection)</h3></div><div class="pb">
+      <p class="hint" style="margin-top:0">Pick a number of products at random from the database and export a clean quotation sheet to send to suppliers. Your <b>target price stays private</b> — the sheet only has blank columns for the supplier to fill in.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="fld" style="margin:0"><label>How many products</label><input id="rfqN" type="number" min="1" value="50" style="width:140px"></div>
+        <div class="fld" style="margin:0"><label>Category</label><select id="rfqCat"></select></div>
+        <div class="fld" style="margin:0"><label>Buyer (optional)</label><select id="rfqBuyer"></select></div>
+        <button class="btn green" onclick="generateRfq(false)">🎲 Generate &amp; export</button>
+        <button class="btn ghost" onclick="generateRfq(true)">Preview / re-shuffle</button>
+      </div>
+      <div id="rfqResult" class="hint" style="margin-top:12px"></div>
+    </div></div>
     <div class="grid2">
-      <div class="panel"><div class="ph"><h3>② Export buyer quote sheet</h3></div><div class="pb">
+      <div class="panel"><div class="ph"><h3>③ Export buyer quote sheet</h3></div><div class="pb">
         <p class="hint" style="margin-top:0">Download a CSV with each product + its best quote.</p>
         <select id="expBuyer" style="margin-bottom:10px;width:100%"></select>
         <button class="btn" onclick="exportQuoteSheet()">⬇ Download quote sheet (CSV)</button></div></div>
-      <div class="panel"><div class="ph"><h3>③ Backup</h3></div><div class="pb">
+      <div class="panel"><div class="ph"><h3>④ Backup</h3></div><div class="pb">
         <p class="hint" style="margin-top:0">Your data lives in the cloud. Download a snapshot anytime.</p>
         <button class="btn ghost" onclick="backup()">⬇ Download backup (.json)</button></div></div>
     </div>
@@ -363,6 +374,8 @@ function fillFilters(){
   sel('pstat').innerHTML='<option value="">All statuses</option>'+STATUSES.map(s=>`<option value="${s}">${STLABEL[s]}</option>`).join('');
   sel('pbuyer').innerHTML='<option value="">All buyers</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
   sel('expBuyer').innerHTML='<option value="">All buyers (full list)</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  sel('rfqCat').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${c.k}</option>`).join('');
+  sel('rfqBuyer').innerHTML='<option value="">All buyers</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
 }
 function renderProducts(){
   const q=(document.getElementById('psearch').value||'').toLowerCase();
@@ -378,6 +391,7 @@ function renderProducts(){
       <td><span class="tag ${catCls(p.category)}">${esc(p.category)}</span></td><td>${esc(buyerName(p.buyerId))}</td>
       <td class="right">${p.qty?Number(p.qty).toLocaleString():'—'}</td><td class="right muted">${p.target!=null?money(p.target):'—'}</td>
       <td class="right ${b?'best':''}">${b?money(b.price):'—'}${b?`<div class="muted" style="font-size:11px;font-weight:400">${esc(supName(b.supplierId))}</div>`:''}</td>
+      <td class="right">${b&&b.moq!=null?Number(b.moq).toLocaleString():'—'}</td>
       <td><span class="st st-${p.status}">${STLABEL[p.status]}</span></td>
       <td class="nowrap right"><button class="btn sm ghost" onclick="openProduct('${p.id}')">Edit</button> <button class="btn sm green" onclick="openQuote('${p.id}')">+ Quote</button></td></tr>`;}).join('');
   document.getElementById('pempty').innerHTML=!rows.length?`<div class="empty">No products match.</div>`:(rows.length>CAP?`<div class="empty">Showing first ${CAP} of <b>${rows.length}</b> matches — refine the search or filters to narrow down.</div>`:'');
@@ -546,6 +560,35 @@ function exportQuoteSheet(){
   download('quote-sheet'+(bid?'-'+buyerName(bid).replace(/\W+/g,'_'):'')+'.csv','﻿'+lines.join('\r\n'),'text/csv');
 }
 function backup(){download('interpoint-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S,null,2),'application/json')}
+
+/* ---------- RFQ list (random selection) ---------- */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+let rfqSel=[];
+function generateRfq(previewOnly){
+  const n=parseInt(document.getElementById('rfqN').value)||0;
+  const cat=document.getElementById('rfqCat').value, bid=document.getElementById('rfqBuyer').value;
+  const res=document.getElementById('rfqResult');
+  if(n<1){res.innerHTML='<span style="color:var(--danger)">Enter how many products you want.</span>';return}
+  const pool=S.products.filter(p=>(!cat||p.category===cat)&&(!bid||p.buyerId===bid));
+  if(!pool.length){res.innerHTML='<span style="color:var(--danger)">No products match that filter.</span>';return}
+  const take=Math.min(n,pool.length);
+  rfqSel=shuffle(pool.slice()).slice(0,take);
+  const preview=rfqSel.slice(0,8).map(p=>'• '+esc((p.ref?p.ref+' — ':'')+p.name)).join('<br>')+(take>8?`<br>…and ${take-8} more`:'');
+  const note=take<n?` <span class="muted">(only ${pool.length} available in that filter)</span>`:'';
+  if(previewOnly){
+    res.innerHTML=`<b>${take}</b> products randomly selected${note}:<br>${preview}<br><button class="btn sm green" style="margin-top:10px" onclick="exportRfq()">⬇ Export this list</button>`;
+  }else{
+    exportRfq();
+    res.innerHTML=`<b style="color:var(--ok)">✓ Exported RFQ sheet with ${take} products</b>${note}:<br>${preview}`;
+  }
+}
+function exportRfq(){
+  if(!rfqSel.length){return}
+  const head=['No.','Ref','Product','Specs','Required Qty','Unit Price (EUR)','MOQ','Lead Time','Incoterm','Sample Cost (EUR)','Remarks'];
+  const lines=[head.join(',')];
+  rfqSel.forEach((p,i)=>lines.push([i+1,p.ref,p.name,p.specs,p.qty,'','','','','',''].map(csvCell).join(',')));
+  download('rfq-list-'+new Date().toISOString().slice(0,10)+'.csv','﻿'+lines.join('\r\n'),'text/csv');
+}
 
 /* ---------- brand ---------- */
 document.getElementById('brandTitle').addEventListener('click',async()=>{
