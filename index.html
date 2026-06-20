@@ -404,6 +404,7 @@ function renderProducts(){
   let rows=S.products.filter(p=>{
     if(fc&&p.category!==fc)return false;if(fs&&p.status!==fs)return false;if(fb&&p.buyerId!==fb)return false;
     if(q&&!((p.name+' '+(p.ref||'')+' '+(p.specs||'')).toLowerCase().includes(q)))return false;return true;});
+  rows.sort((a,b)=>{const ca=CATS.findIndex(c=>c.k===a.category),cb=CATS.findIndex(c=>c.k===b.category);if(ca!==cb)return ca-cb;return String(a.ref||'').localeCompare(String(b.ref||''),undefined,{numeric:true,sensitivity:'base'});});
   lastFilteredIds=rows.map(p=>p.id);
   const CAP=300,shown=rows.slice(0,CAP);
   document.getElementById('pbody').innerHTML=shown.map(p=>{
