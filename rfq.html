@@ -66,7 +66,7 @@ function render(items,brand,Lx){
     <td>${i+1}</td>
     <td class="img">${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener"><img src="${esc(p.image)}" loading="lazy"></a>`:''}</td>
     <td>${esc(p.ref||'')}</td>
-    <td class="nm">${esc(p.name)}${p.name_en?`<div class="tr">${esc(p.name_en)}</div>`:''}${p.name_zh?`<div class="tr zh">${esc(p.name_zh)}</div>`:''}</td>
+    <td class="nm">${esc(lang==='zh'?(p.name_zh||p.name):(p.name_en||p.name))}</td>
     <td class="ds">${esc(p.specs||'')}</td>
     <td>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${Lx.view}</a>`:''}</td>
     <td>${p.qty!=null?p.qty:''}</td>
