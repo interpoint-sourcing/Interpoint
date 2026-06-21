@@ -45,6 +45,11 @@ else langs=['zh','en','hr'];
 const ord=['zh','en','hr'].filter(l=>langs.includes(l));
 const labelLang=langs.includes('zh')?'zh':'en';
 const NAMEVAL={zh:p=>p.name_zh||'',en:p=>p.name_en||'',hr:p=>p.name};
+const hl=[...new Set(ord.map(l=>l==='zh'?'zh':'en'))];
+const H=k=>hl.map(x=>L[x][k]).join(' / ');
+let I18N={cat:{},sub:{}};
+function descByLang(p,lang){const s=p.specs||'';if(!s)return '';if(lang!=='zh')return s;return s.split(' · ').map(t=>{t=t.trim();if(t.startsWith('Brand:')||t.startsWith('HR:'))return t;return (I18N.cat&&I18N.cat[t])||(I18N.sub&&I18N.sub[t])||t;}).join(' · ');}
+function descLines(p){const seen={},out=[];ord.forEach(l=>{const d=descByLang(p,l);if(d&&!seen[d]){seen[d]=1;out.push(d);}});return out;}
 const ids=(params.get('ids')||'').split(',').map(s=>s.trim()).filter(Boolean);
 document.documentElement.lang=labelLang;
 
@@ -55,6 +60,7 @@ async function api(pathAndQuery){
 }
 async function load(){
   const Lx=L[labelLang];
+  try{I18N=await (await fetch('i18n.json')).json();}catch(e){}
   if(!ids.length){document.getElementById('app').innerHTML='<div class="loading">This quotation list is empty.</div>';return;}
   let brand='Interpoint';
   try{
@@ -73,7 +79,7 @@ function render(items,brand,Lx){
     <td class="img">${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener"><img src="${esc(p.image)}" loading="lazy"></a>`:''}</td>
     <td>${esc(p.ref||'')}</td>
     <td class="nm">${(()=>{let ls=ord.map(l=>NAMEVAL[l](p)).filter(Boolean);if(!ls.length)ls=[p.name];return ls.map((t,k)=>k===0?esc(t):`<div class="tr">${esc(t)}</div>`).join('');})()}</td>
-    <td class="ds">${esc(p.specs||'')}</td>
+    <td class="ds">${descLines(p).map((t,k)=>k===0?esc(t):`<div class="tr">${esc(t)}</div>`).join('')}</td>
     <td>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${Lx.view}</a>`:''}</td>
     <td>${p.qty!=null?p.qty:''}</td>
     <td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
@@ -83,7 +89,7 @@ function render(items,brand,Lx){
     <div class="note">${esc(Lx.sub)}</div>
     <div class="bar"><button class="btn" onclick="window.print()">${Lx.print}</button></div>
     <table><thead><tr>
-      <th>${Lx.no}</th><th>${Lx.img}</th><th>${Lx.ref}</th><th>${Lx.name}</th><th>${Lx.desc}</th><th>${Lx.link}</th><th>${Lx.qty}</th><th>${Lx.price}</th><th>${Lx.moq}</th><th>${Lx.lead}</th><th>${Lx.incoterm}</th><th>${Lx.sample}</th><th>${Lx.remark}</th>
+      <th>${H('no')}</th><th>${H('img')}</th><th>${H('ref')}</th><th>${H('name')}</th><th>${H('desc')}</th><th>${H('link')}</th><th>${H('qty')}</th><th>${H('price')}</th><th>${H('moq')}</th><th>${H('lead')}</th><th>${H('incoterm')}</th><th>${H('sample')}</th><th>${H('remark')}</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
 load();
