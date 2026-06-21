@@ -270,8 +270,8 @@ const money=n=>n==null?"—":"€"+Number(n).toLocaleString(undefined,{minimumFr
 const val=i=>document.getElementById(i).value.trim();
 
 /* ---------- row mapping ---------- */
-const prodFromRow=r=>({id:r.id,ref:r.ref,name:r.name,category:r.category,buyerId:r.buyer_id||'',qty:r.qty,target:r.target,specs:r.specs,image:r.image||'',url:r.url||'',status:r.status||'New',notes:r.notes});
-const prodToRow=p=>({id:p.id,ref:p.ref||null,name:p.name,category:p.category,buyer_id:p.buyerId||null,qty:p.qty,target:p.target,specs:p.specs||null,image:p.image||null,url:p.url||null,status:p.status,notes:p.notes||null});
+const prodFromRow=r=>({id:r.id,ref:r.ref,name:r.name,nameEn:r.name_en||'',nameZh:r.name_zh||'',category:r.category,buyerId:r.buyer_id||'',qty:r.qty,target:r.target,specs:r.specs,image:r.image||'',url:r.url||'',status:r.status||'New',notes:r.notes});
+const prodToRow=p=>({id:p.id,ref:p.ref||null,name:p.name,name_en:p.nameEn||null,name_zh:p.nameZh||null,category:p.category,buyer_id:p.buyerId||null,qty:p.qty,target:p.target,specs:p.specs||null,image:p.image||null,url:p.url||null,status:p.status,notes:p.notes||null});
 const quoteFromRow=r=>({id:r.id,productId:r.product_id,supplierId:r.supplier_id||'',price:r.price,moq:r.moq,lead:r.lead,incoterm:r.incoterm,sample:r.sample,notes:r.notes});
 const quoteToRow=q=>({id:q.id,product_id:q.productId,supplier_id:q.supplierId||null,price:q.price,moq:q.moq,lead:q.lead||null,incoterm:q.incoterm||null,sample:q.sample,notes:q.notes||null});
 const buyerToRow=b=>({id:b.id,name:b.name,country:b.country||null,contact:b.contact||null,notes:b.notes||null});
@@ -429,7 +429,7 @@ function renderProducts(){
     const b=bestQuote(p.id);const qs=S.quotes.filter(q=>q.productId===p.id);
     return `<tr><td><input type="checkbox" ${rfqPick.has(p.id)?'checked':''} onclick="togglePick('${p.id}')"></td>
       <td class="nowrap muted">${esc(p.ref||'')}</td>
-      <td>${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener" title="Open image"><img src="${esc(p.image)}" loading="lazy" style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--line);float:left;margin-right:8px"></a>`:''}${p.url?`<a class="plink" href="${esc(p.url)}" target="_blank" rel="noopener" title="Open product page (full description)"><b>${esc(p.name)}</b></a>`:`<b>${esc(p.name)}</b>`}${p.specs?`<div class="muted" style="font-size:12px;max-width:280px">${esc(p.specs)}</div>`:''}${qs.length?`<details><summary>${qs.length} quote${qs.length>1?'s':''}</summary>${quotesTable(p.id)}</details>`:''}</td>
+      <td>${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener" title="Open image"><img src="${esc(p.image)}" loading="lazy" style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--line);float:left;margin-right:8px"></a>`:''}${p.url?`<a class="plink" href="${esc(p.url)}" target="_blank" rel="noopener" title="Open product page (full description)"><b>${esc(p.name)}</b></a>`:`<b>${esc(p.name)}</b>`}${p.nameZh?`<div style="font-size:11.5px;color:#1a2433">${esc(p.nameZh)}</div>`:''}${p.nameEn?`<div class="muted" style="font-size:11.5px">${esc(p.nameEn)}</div>`:''}${p.specs?`<div class="muted" style="font-size:12px;max-width:280px">${esc(p.specs)}</div>`:''}${qs.length?`<details><summary>${qs.length} quote${qs.length>1?'s':''}</summary>${quotesTable(p.id)}</details>`:''}</td>
       <td><span class="tag ${catCls(p.category)}">${esc(p.category)}</span></td><td>${esc(buyerName(p.buyerId))}</td>
       <td class="right">${p.qty?Number(p.qty).toLocaleString():'—'}</td><td class="right muted">${p.target!=null?money(p.target):'—'}</td>
       <td class="right ${b?'best':''}">${b?money(b.price):'—'}${b?`<div class="muted" style="font-size:11px;font-weight:400">${esc(supName(b.supplierId))}</div>`:''}</td>
@@ -452,8 +452,10 @@ document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==
 
 /* ---------- product CRUD ---------- */
 function openProduct(id){
-  const p=id?S.products.find(x=>x.id===id):{id:null,name:'',ref:'',category:'Medical',buyerId:'',qty:'',target:'',specs:'',image:'',url:'',status:'New',notes:''};
-  const body=`<div class="fld"><label>Product name *</label><input id="f_name" value="${esc(p.name)}"></div>
+  const p=id?S.products.find(x=>x.id===id):{id:null,name:'',nameEn:'',nameZh:'',ref:'',category:'Medical',buyerId:'',qty:'',target:'',specs:'',image:'',url:'',status:'New',notes:''};
+  const body=`<div class="fld"><label>Product name * (original)</label><input id="f_name" value="${esc(p.name)}"></div>
+    <div class="grid2"><div class="fld"><label>Name (English)</label><input id="f_name_en" value="${esc(p.nameEn||'')}"></div>
+    <div class="fld"><label>名称 (Chinese)</label><input id="f_name_zh" value="${esc(p.nameZh||'')}"></div></div>
     <div class="grid3"><div class="fld"><label>Reference</label><input id="f_ref" value="${esc(p.ref||'')}"></div>
     <div class="fld"><label>Category</label><select id="f_cat">${CATS.map(c=>`<option ${c.k===p.category?'selected':''}>${c.k}</option>`).join('')}</select></div>
     <div class="fld"><label>Status</label><select id="f_status">${STATUSES.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STLABEL[s]}</option>`).join('')}</select></div></div>
@@ -469,7 +471,7 @@ function openProduct(id){
 }
 async function saveProduct(id){
   const name=val('f_name');if(!name){alert('Product name is required');return}
-  const p={id:id||uid('p'),name,ref:val('f_ref'),category:val('f_cat'),status:val('f_status'),buyerId:val('f_buyer'),qty:num(val('f_qty')),target:num(val('f_target')),specs:val('f_specs'),image:val('f_image'),url:val('f_url'),notes:val('f_notes')};
+  const p={id:id||uid('p'),name,nameEn:val('f_name_en'),nameZh:val('f_name_zh'),ref:val('f_ref'),category:val('f_cat'),status:val('f_status'),buyerId:val('f_buyer'),qty:num(val('f_qty')),target:num(val('f_target')),specs:val('f_specs'),image:val('f_image'),url:val('f_url'),notes:val('f_notes')};
   const {error}=await db.from('products').upsert(prodToRow(p));
   if(error){alert('Save failed: '+error.message);return}
   upsertLocal('products',p);closeModal();renderAll();
@@ -712,12 +714,12 @@ function exportRfqDoc(){
   const items=rfqSelected();if(!items.length)return;
   const lang=document.getElementById('rfqLang').value, fmt=document.getElementById('rfqFmt').value, L=RFQ_L[lang];
   if(fmt==='csv'){
-    const head=[L.no,L.ref,L.name,L.desc,L.url,L.imgurl,L.qty,L.price,L.moq,L.lead,L.incoterm,L.sample,L.remark];
+    const head=[L.no,L.ref,L.name,'Name (EN)','名称 (中文)',L.desc,L.url,L.imgurl,L.qty,L.price,L.moq,L.lead,L.incoterm,L.sample,L.remark];
     const lines=[head.join(',')];
-    items.forEach((p,i)=>lines.push([i+1,p.ref,p.name,p.specs,p.url,p.image,p.qty,'','','','','',''].map(csvCell).join(',')));
+    items.forEach((p,i)=>lines.push([i+1,p.ref,p.name,p.nameEn,p.nameZh,p.specs,p.url,p.image,p.qty,'','','','','',''].map(csvCell).join(',')));
     download('RFQ-'+(lang==='zh'?'CN-':'')+new Date().toISOString().slice(0,10)+'.csv','﻿'+lines.join('\r\n'),'text/csv');
   }else{
-    const rowsHtml=items.map((p,i)=>`<tr><td>${i+1}</td><td class="img">${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener"><img src="${esc(p.image)}"></a>`:''}</td><td>${esc(p.ref||'')}</td><td class="nm">${esc(p.name)}</td><td class="ds">${esc(p.specs||'')}</td><td>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${L.view}</a>`:''}</td><td>${p.qty!=null?p.qty:''}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
+    const rowsHtml=items.map((p,i)=>`<tr><td>${i+1}</td><td class="img">${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener"><img src="${esc(p.image)}"></a>`:''}</td><td>${esc(p.ref||'')}</td><td class="nm">${esc(p.name)}${p.nameEn?`<div style="font-size:10px;color:#555">${esc(p.nameEn)}</div>`:''}${p.nameZh?`<div style="font-size:11px;color:#111">${esc(p.nameZh)}</div>`:''}</td><td class="ds">${esc(p.specs||'')}</td><td>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${L.view}</a>`:''}</td><td>${p.qty!=null?p.qty:''}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
     const doc=`<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"><title>${esc(L.title)} - ${esc(S.brand)}</title>
 <style>body{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif;margin:24px;color:#1a2433}
 h1{font-size:20px;margin:0 0 4px}.meta{color:#555;font-size:13px;margin-bottom:6px}.note{font-size:12px;color:#555;margin:6px 0 14px}

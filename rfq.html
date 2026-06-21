@@ -18,6 +18,7 @@
   td.img img{width:74px;height:74px;object-fit:cover;border-radius:4px}
   td.img .u{font-size:8px;color:#888;max-width:84px;word-break:break-all}
   td.nm{min-width:150px}td.ds{min-width:150px;color:#444}
+  td.nm .tr{font-size:11px;color:#555;margin-top:2px}td.nm .tr.zh{color:#111;font-weight:600}
   tr:nth-child(even) td{background:#f7f9fc}
   a{color:#1f6feb}
   .loading{padding:40px;text-align:center;color:#666}
@@ -51,7 +52,7 @@ async function load(){
   if(!ids.length){document.getElementById('app').innerHTML='<div class="loading">This quotation list is empty.</div>';return;}
   let brand='Interpoint';
   try{
-    const products=await api('products?select=id,ref,name,specs,image,url,qty&id=in.('+ids.join(',')+')');
+    const products=await api('products?select=*&id=in.('+ids.join(',')+')');
     try{const s=await api("settings?select=brand&id=eq.app");if(s&&s[0]&&s[0].brand)brand=s[0].brand;}catch(e){}
     const byId={};products.forEach(p=>byId[p.id]=p);
     const items=ids.map(id=>byId[id]).filter(Boolean);
@@ -65,7 +66,7 @@ function render(items,brand,Lx){
     <td>${i+1}</td>
     <td class="img">${p.image?`<a href="${esc(p.image)}" target="_blank" rel="noopener"><img src="${esc(p.image)}" loading="lazy"></a>`:''}</td>
     <td>${esc(p.ref||'')}</td>
-    <td class="nm">${esc(p.name)}</td>
+    <td class="nm">${esc(p.name)}${p.name_en?`<div class="tr">${esc(p.name_en)}</div>`:''}${p.name_zh?`<div class="tr zh">${esc(p.name_zh)}</div>`:''}</td>
     <td class="ds">${esc(p.specs||'')}</td>
     <td>${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${Lx.view}</a>`:''}</td>
     <td>${p.qty!=null?p.qty:''}</td>
