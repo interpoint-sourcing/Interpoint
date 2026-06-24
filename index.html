@@ -221,6 +221,7 @@
     <h2 class="title">Procurement requests</h2>
     <p class="sub">Buyers: tell us what you need sourced — including your target price. We'll take it from there.</p>
     <div class="panel"><div class="ph"><h3>① Submit a requirement</h3></div><div class="pb">
+      <p class="hint" style="margin-top:0">💡 To request a product from our catalogue, open the <b>Products</b> tab, find it (search / filter / category), and click the orange <b>Request</b> button — no typing needed. Use this form only for items <b>not</b> in the catalogue.</p>
       <div class="grid2">
         <div class="fld"><label>Your name / company *</label><input id="rq_buyer" placeholder="e.g. Adriatic MedSupply"></div>
         <div class="fld"><label>Product / item needed *</label><input id="rq_item" placeholder="e.g. Nitrile exam gloves, blue, size M"></div>
@@ -308,8 +309,8 @@ const supToRow=s=>({id:s.id,name:s.name,category:s.category||null,location:s.loc
 const carrierToRow=c=>({id:c.id,name:c.name,mode:c.mode||null,routes:c.routes||null,contact:c.contact||null,rates:c.rates||null,notes:c.notes||null});
 const shipmentFromRow=r=>({id:r.id,ref:r.ref,carrierId:r.carrier_id||'',origin:r.origin,destination:r.destination,mode:r.mode,container:r.container,cost:r.cost,transit:r.transit,status:r.status||'Quote',buyerId:r.buyer_id||'',notes:r.notes});
 const shipmentToRow=s=>({id:s.id,ref:s.ref||null,carrier_id:s.carrierId||null,origin:s.origin||null,destination:s.destination||null,mode:s.mode||null,container:s.container||null,cost:s.cost,transit:s.transit||null,status:s.status,buyer_id:s.buyerId||null,notes:s.notes||null});
-const requestFromRow=r=>({id:r.id,buyer:r.buyer_name||'',item:r.item,category:r.category,qty:r.qty,target:r.target,specs:r.specs,notes:r.notes,status:r.status||'Submitted',created:r.created_at});
-const requestToRow=q=>({id:q.id,buyer_name:q.buyer||null,item:q.item,category:q.category||null,qty:q.qty,target:q.target,specs:q.specs||null,notes:q.notes||null,status:q.status});
+const requestFromRow=r=>({id:r.id,productId:r.product_id||'',buyer:r.buyer_name||'',item:r.item,category:r.category,qty:r.qty,target:r.target,specs:r.specs,notes:r.notes,status:r.status||'Submitted',created:r.created_at});
+const requestToRow=q=>({id:q.id,product_id:q.productId||null,buyer_name:q.buyer||null,item:q.item,category:q.category||null,qty:q.qty,target:q.target,specs:q.specs||null,notes:q.notes||null,status:q.status});
 
 /* ---------- helpers ---------- */
 function bestQuote(pid){const qs=S.quotes.filter(q=>q.productId===pid&&q.price!=null);if(!qs.length)return null;return qs.reduce((a,b)=>b.price<a.price?b:a)}
@@ -469,7 +470,7 @@ function renderProducts(){
       <td class="right ${b?'best':''}">${b?money(b.price):'—'}${b?`<div class="muted" style="font-size:11px;font-weight:400">${esc(supName(b.supplierId))}</div>`:''}</td>
       <td class="right">${b&&b.moq!=null?Number(b.moq).toLocaleString():'—'}</td>
       <td><span class="st st-${p.status}">${STLABEL[p.status]}</span></td>
-      <td class="nowrap right"><button class="btn sm ghost" onclick="openProduct('${p.id}')">Edit</button> <button class="btn sm green" onclick="openQuote('${p.id}')">+ Quote</button></td></tr>`;}).join('');
+      <td class="nowrap right"><button class="btn sm" style="background:var(--warn)" onclick="openProductRequest('${p.id}')" title="Buyer: request this product">Request</button> <button class="btn sm ghost" onclick="openProduct('${p.id}')">Edit</button> <button class="btn sm green" onclick="openQuote('${p.id}')">+ Quote</button></td></tr>`;}).join('');
   document.getElementById('pempty').innerHTML=!rows.length?`<div class="empty">No products match.</div>`:(rows.length>CAP?`<div class="empty">Showing first ${CAP} of <b>${rows.length}</b> matches — refine search/filters to narrow. (Tick boxes select per row; "select all" covers all ${rows.length} matched.)</div>`:'');
   const pAll=document.getElementById('pAll');if(pAll)pAll.checked=lastFilteredIds.length>0&&lastFilteredIds.every(id=>rfqPick.has(id));
   updatePickbar();
@@ -677,12 +678,35 @@ async function delShipment(id){
 
 /* ---------- procurement requests (buyer self-input) ---------- */
 function reqSt(s){return {Submitted:'New',Reviewing:'RFQ',Sourcing:'Sampling',Quoted:'Quoted',Closed:'Ordered'}[s]||'New'}
+function reqImg(r){if(r.productId){const p=S.products.find(x=>x.id===r.productId);if(p&&p.image)return `<img src="${esc(p.image)}" loading="lazy" style="width:34px;height:34px;object-fit:cover;border-radius:5px;border:1px solid var(--line);float:left;margin-right:8px">`;}return '';}
+function openProductRequest(pid){
+  const p=S.products.find(x=>x.id===pid);if(!p)return;
+  const body=`<div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-start">
+      ${p.image?`<img src="${esc(p.image)}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">`:''}
+      <div><b>${esc(p.name)}</b><div class="muted" style="font-size:12px">${esc(p.ref||'')}${p.specs?' · '+esc(p.specs):''}</div></div></div>
+    <div class="grid2"><div class="fld"><label>Your name / company *</label><input id="pr_buyer" placeholder="e.g. Adriatic MedSupply"></div>
+    <div class="fld"><label>Quantity</label><input id="pr_qty" placeholder="e.g. 50000"></div></div>
+    <div class="grid2"><div class="fld"><label>Target price (€ / unit)</label><input id="pr_target" placeholder="optional"></div></div>
+    <div class="fld"><label>Notes (deadline, packaging, certifications…)</label><textarea id="pr_notes" rows="2"></textarea></div>`;
+  const foot=`<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn green" onclick="submitProductRequest('${pid}')">Submit request</button>`;
+  openModal('Request this product',body,foot);setTimeout(()=>document.getElementById('pr_buyer').focus(),50);
+}
+async function submitProductRequest(pid){
+  const p=S.products.find(x=>x.id===pid);if(!p)return;
+  const g=i=>document.getElementById(i).value.trim();
+  const buyer=g('pr_buyer');if(!buyer){alert('Please enter your name / company.');return}
+  const rec={id:uid('rq'),productId:pid,buyer,item:p.name,category:p.category,qty:num(g('pr_qty')),target:num(g('pr_target')),specs:p.specs,notes:g('pr_notes'),status:'Submitted'};
+  const {error}=await db.from('requests').upsert(requestToRow(rec));
+  if(error){alert('Could not submit: '+error.message+(/product_id|column/.test(error.message)?'\n\nRun: alter table requests add column if not exists product_id text;':''));return}
+  rec.created=new Date().toISOString();upsertLocal('requests',rec);renderRequests();renderDash();closeModal();
+  alert('✓ Request submitted: '+p.name);
+}
 function renderRequests(){
   const rows=[...S.requests].sort((a,b)=>String(b.created||'').localeCompare(String(a.created||'')));
   document.getElementById('rqbody').innerHTML=rows.map(r=>`<tr>
     <td class="nowrap muted" style="font-size:12px">${r.created?esc(String(r.created).slice(0,10)):''}</td>
     <td><b>${esc(r.buyer||'')}</b></td>
-    <td>${esc(r.item)}${r.specs?`<div class="muted" style="font-size:12px;max-width:280px">${esc(r.specs)}</div>`:''}</td>
+    <td>${reqImg(r)}<b>${esc(r.item)}</b>${r.specs?`<div class="muted" style="font-size:12px;max-width:280px">${esc(r.specs)}</div>`:''}</td>
     <td>${r.category?`<span class="tag ${catCls(r.category)}">${esc(r.category)}</span>`:'—'}</td>
     <td class="right">${r.qty?Number(r.qty).toLocaleString():'—'}</td>
     <td class="right">${r.target!=null?money(r.target):'—'}</td>
