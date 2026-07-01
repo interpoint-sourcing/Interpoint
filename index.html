@@ -506,10 +506,10 @@ function attachEvents(){
   if(btnReset) btnReset.addEventListener("click",()=>setState({step:0,garment:null,otherGarment:"",selected:{},otherAlt:"",urgency:"standard",showQR:false,customerName:"",customerWeChat:""}));
 
   const customerNameInput=document.getElementById("customerName");
-  if(customerNameInput) customerNameInput.addEventListener("input",e=>setState({customerName:e.target.value}));
+  if(customerNameInput) customerNameInput.addEventListener("input",e=>{state.customerName=e.target.value;});
 
   const customerWeChatInput=document.getElementById("customerWeChat");
-  if(customerWeChatInput) customerWeChatInput.addEventListener("input",e=>setState({customerWeChat:e.target.value}));
+  if(customerWeChatInput) customerWeChatInput.addEventListener("input",e=>{state.customerWeChat=e.target.value;});
 
   const btnBook=document.getElementById("btnBook");
   if(btnBook) btnBook.addEventListener("click",()=>{
