@@ -138,6 +138,8 @@
     <button data-v="data">Import / Export</button>
   </nav>
   <div class="userbox">
+    <select id="uiLang" onchange="applyUILang(this.value);renderAll()" title="Interface language" style="background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:6px;padding:5px 8px;font-size:12.5px;cursor:pointer">
+      <option value="en">EN</option><option value="zh">中文</option></select>
     <span class="syncdot" id="syncdot" title="Live sync"></span>
     <span style="color:#9db4cc">Live</span>
   </div>
@@ -289,6 +291,39 @@ const STLABEL={New:"New",RFQ:"RFQ sent",Quoted:"Quoted",Sampling:"Sampling",Appr
 let S={brand:"Interpoint",brandSub:"China → Europe sourcing",products:[],suppliers:[],buyers:[],quotes:[],carriers:[],shipments:[],requests:[]};
 const CONTACT_EMAIL="jarrodliu@hotmail.com";
 const REQSTATUS=["Submitted","Reviewing","Sourcing","Quoted","Closed"];
+/* ---------- interface language (EN / 中文) ---------- */
+const UITEXT={
+  "Dashboard":"仪表盘","Products":"产品","Transport":"物流","Suppliers":"供应商","Buyers":"买家","Requests":"采购需求","Import / Export":"导入 / 导出",
+  "Products to source":"待采购产品","Procurement requests":"采购需求",
+  "Live overview — shared with your whole team in real time.":"实时概览 —— 与整个团队实时共享。",
+  "Master list. Log quotes from multiple suppliers — the cheapest is highlighted automatically.":"主产品清单。可记录多家供应商报价 —— 最低价自动高亮。",
+  "Your freight forwarders and your shipping quotes / shipments — China to Europe.":"您的货运代理及运输报价 / 运单 —— 中国到欧洲。",
+  "Your Chinese supplier contacts and the categories they cover.":"您的中国供应商联系人及其覆盖品类。",
+  "Your European clients and the products assigned to each.":"您的欧洲客户及分配的产品。",
+  "Buyers: tell us what you need sourced — including your target price. We'll take it from there.":"买家：告诉我们您需要采购的产品（含目标价），剩下的交给我们。",
+  "Add more products in bulk, or export a buyer quote sheet.":"批量添加产品，或导出买家报价表。",
+  "Pipeline by status":"按状态统计","Products needing action":"待处理产品","By category":"按品类",
+  "Transport providers":"物流服务商","Shipments & freight quotes":"运单与运费报价",
+  "① Submit a requirement":"① 提交采购需求","② Submitted requirements":"② 已提交的需求",
+  "① Import more products (paste from Excel)":"① 批量导入产品（从 Excel 粘贴）","② Build a supplier RFQ list":"② 生成供应商询价单","③ Export buyer quote sheet":"③ 导出买家报价表","④ Backup":"④ 备份",
+  "+ Add product":"+ 添加产品","+ Add supplier":"+ 添加供应商","+ Add buyer":"+ 添加买家","+ Add provider":"+ 添加服务商","+ Add shipment":"+ 添加运单","Submit requirement":"提交需求","Go to Products →":"前往产品 →",
+  "Ref":"编号","Category":"品类","Qty":"数量","Target price":"目标价","Best quote":"最优报价","Min. order":"最小起订量","Status":"状态","Location":"地点","Contact":"联系方式","Quotes":"报价数","Notes":"备注","Country":"国家","Provider":"服务商","Mode":"方式","Routes":"路线","Rates":"费率","Route":"路线","Container":"箱型","Cost":"费用","Transit":"运输时间","Date":"日期","Item":"产品","Target":"目标价","Supplier":"供应商",
+  "Your name / company *":"您的名称 / 公司 *","Product / item needed *":"所需产品 *","Quantity":"数量","Target price (€ / unit)":"目标价（€ / 单位）","Specifications / requirements":"规格 / 要求","Notes (anything else)":"备注（其他）",
+  "Products with a quote":"已有报价的产品","Quotes logged":"已记录报价","Best-quote order value":"最优报价订单额","Shipments":"运单","Buyer requests":"买家需求",
+  "New":"新","RFQ sent":"已发询价","Quoted":"已报价","Sampling":"打样中","Approved":"已批准","Ordered":"已下单","On hold":"暂缓",
+  "products":"件产品","Nothing pending. 🎉":"暂无待办 🎉"
+};
+let UILANG=localStorage.getItem('ui_lang')||'en';
+function UI(s){return (UILANG==='zh'&&UITEXT[s]!==undefined)?UITEXT[s]:s;}
+function applyUILang(l){
+  UILANG=(l==='zh')?'zh':'en'; localStorage.setItem('ui_lang',UILANG);
+  const sel=document.getElementById('uiLang'); if(sel)sel.value=UILANG;
+  document.querySelectorAll('#nav button, #mobnav option, h2.title, p.sub, .ph h3, .toolbar>button, thead th, #v-requests label').forEach(el=>{
+    if(el.children.length)return;
+    if(el.dataset.en===undefined)el.dataset.en=el.textContent.trim();
+    el.textContent=(UILANG==='zh'&&UITEXT[el.dataset.en]!==undefined)?UITEXT[el.dataset.en]:el.dataset.en;
+  });
+}
 let rfqPick=new Set(), lastFilteredIds=[];
 let I18N={cat:{},sub:{}};
 
@@ -415,14 +450,14 @@ function renderDash(){
   const cards=[[p.length,"Products","--accent"],[S.suppliers.length,"Suppliers","--accent2"],[S.buyers.length,"Buyers","--navy"],
     [quoted,"Products with a quote","--warn"],[S.quotes.length,"Quotes logged","--accent"],[money(valQ),"Best-quote order value","--accent2"],
     [S.carriers.length,"Transport providers","--navy"],[S.shipments.length,"Shipments","--accent"],[S.requests.length,"Buyer requests","--warn"]];
-  document.getElementById('statCards').innerHTML=cards.map(c=>`<div class="stat"><div class="n">${c[0]}</div><div class="l">${c[1]}</div><div class="bar" style="background:var(${c[2]})"></div></div>`).join('');
+  document.getElementById('statCards').innerHTML=cards.map(c=>`<div class="stat"><div class="n">${c[0]}</div><div class="l">${UI(c[1])}</div><div class="bar" style="background:var(${c[2]})"></div></div>`).join('');
   const counts={};STATUSES.forEach(s=>counts[s]=0);p.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
   const max=Math.max(1,...Object.values(counts));
-  document.getElementById('pipeline').innerHTML=STATUSES.map(s=>`<div style="display:flex;align-items:center;gap:10px;margin:7px 0"><span class="st st-${s}" style="min-width:84px;text-align:center">${STLABEL[s]}</span><div style="flex:1;background:#eef2f7;border-radius:6px;height:18px;overflow:hidden"><div style="height:100%;width:${counts[s]/max*100}%;background:var(--accent);min-width:${counts[s]?'22px':'0'};border-radius:6px"></div></div><b style="min-width:26px;text-align:right">${counts[s]}</b></div>`).join('');
+  document.getElementById('pipeline').innerHTML=STATUSES.map(s=>`<div style="display:flex;align-items:center;gap:10px;margin:7px 0"><span class="st st-${s}" style="min-width:84px;text-align:center">${UI(STLABEL[s])}</span><div style="flex:1;background:#eef2f7;border-radius:6px;height:18px;overflow:hidden"><div style="height:100%;width:${counts[s]/max*100}%;background:var(--accent);min-width:${counts[s]?'22px':'0'};border-radius:6px"></div></div><b style="min-width:26px;text-align:right">${counts[s]}</b></div>`).join('');
   const todo=p.filter(x=>(x.status==='New'||x.status==='RFQ')&&!bestQuote(x.id)).slice(0,8);
-  document.getElementById('todo').innerHTML=todo.length?`<table><tbody>${todo.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="muted" style="font-size:12px">${esc(x.ref||'')}</div></td><td><span class="tag ${catCls(x.category)}">${esc(x.category)}</span></td><td class="right"><button class="btn sm ghost" onclick="openProduct('${x.id}')">Open</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">Nothing pending. 🎉</div>`;
+  document.getElementById('todo').innerHTML=todo.length?`<table><tbody>${todo.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="muted" style="font-size:12px">${esc(x.ref||'')}</div></td><td><span class="tag ${catCls(x.category)}">${esc(x.category)}</span></td><td class="right"><button class="btn sm ghost" onclick="openProduct('${x.id}')">Open</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${UI('Nothing pending. 🎉')}</div>`;
   const cc={};p.forEach(x=>cc[x.category]=(cc[x.category]||0)+1);
-  document.getElementById('byCat').innerHTML=CATS.filter(c=>cc[c.k]).map(c=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="tag ${c.cls}" style="min-width:150px">${c.k}</span><b>${cc[c.k]}</b><span class="muted">products</span></div>`).join('')||'<div class="empty">No products yet.</div>';
+  document.getElementById('byCat').innerHTML=CATS.filter(c=>cc[c.k]).map(c=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="tag ${c.cls}" style="min-width:150px">${c.k}</span><b>${cc[c.k]}</b><span class="muted">${UI('products')}</span></div>`).join('')||'<div class="empty">No products yet.</div>';
 }
 
 /* ---------- render: products ---------- */
@@ -885,6 +920,7 @@ function paintBrand(){
 
 /* ---------- start ---------- */
 document.getElementById('appWrap').style.display='';
+applyUILang(UILANG);
 fetch('i18n.json').then(r=>r.json()).then(j=>{I18N=j}).catch(()=>{}).then(()=>loadAll().then(subscribe));
 </script>
 </body>
