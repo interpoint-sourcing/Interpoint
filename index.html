@@ -53,7 +53,7 @@
   .btn[disabled]{opacity:.5;cursor:not-allowed}
   table{width:100%;border-collapse:collapse}
   th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;background:#fafbfc}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;background:#fafbfc;white-space:nowrap}
   tr:hover td{background:#fafcff}
   .tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
   .cat-med{background:#fde8e8;color:#b42318}
@@ -610,9 +610,13 @@ async function saveQuote(pid,qid){
 }
 async function delQuote(qid,fromModal){
   if(!confirm('Delete this quote?'))return;
+  const q=S.quotes.find(x=>x.id===qid); const pid=q?q.productId:null;
   const {error}=await db.from('quotes').delete().eq('id',qid);
   if(error){alert('Delete failed: '+error.message);return}
-  removeLocal('quotes',qid);if(fromModal)closeModal();renderAll();
+  removeLocal('quotes',qid);
+  if(pid){const p=S.products.find(x=>x.id===pid); const left=S.quotes.filter(x=>x.productId===pid).length;
+    if(p&&left===0&&p.status==='Quoted'){p.status='New';await db.from('products').update({status:'New'}).eq('id',pid);}}
+  if(fromModal)closeModal();renderAll();
 }
 
 /* ---------- supplier CRUD ---------- */
