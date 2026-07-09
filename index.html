@@ -142,7 +142,8 @@
       <span data-l="en" onclick="applyUILang('en')" style="cursor:pointer;padding:4px 9px;border-radius:5px">EN</span>
       <span data-l="zh" onclick="applyUILang('zh')" style="cursor:pointer;padding:4px 9px;border-radius:5px">中文</span></span>
     <span class="syncdot" id="syncdot" title="Live sync"></span>
-    <span style="color:#9db4cc">Live</span>
+    <span id="userEmail" style="color:#cfe0f0;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="logout()" style="background:rgba(255,255,255,.15);border:0;color:#fff;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:12px">Log out</button>
   </div>
 </header>
 <select class="mobnav" id="mobnav" style="margin:10px auto;display:block;max-width:90%" onchange="show(this.value)">
@@ -972,10 +973,10 @@ function paintBrand(){
   document.title=S.brand;
 }
 
-/* ---------- start (open, no login) ---------- */
-document.getElementById('appWrap').style.display='';
+/* ---------- start (email login) ---------- */
 applyUILang(UILANG);
-loadAll().then(subscribe);
+db.auth.onAuthStateChange((_e,session)=>{session?enterApp():showLogin();});
+(async()=>{const {data:{session}}=await db.auth.getSession();session?enterApp():showLogin();})();
 </script>
 </body>
 </html>
