@@ -45,6 +45,7 @@
 <div class="wrap">
   <div id="app"><div class="loading">Loading…</div></div>
 </div>
+<script src="xlsx.full.min.js"></script>
 <script>
 const SUPABASE_URL="https://awhijbgonnmbmymvbzlb.supabase.co";
 const SUPABASE_KEY="sb_publishable_0gCzyKbXWiWj-UCvyI9mXg_ixERRH0B";
@@ -52,11 +53,11 @@ const L={
   en:{title:'Quotation',sub:'Enter the prices your supplier quoted. Products are listed in REF order. Line totals and the grand total update automatically.',
       no:'No.',img:'Image',ref:'Ref',name:'Product',qty:'Qty',price:'Unit Price',moq:'MOQ',lead:'Lead Time',incoterm:'Incoterm',sample:'Sample Cost',remark:'Remarks',line:'Line Total',
       supplier:'Supplier',qref:'Supplier quote ref',qdate:'Quote date',cur:'Currency',from:'From',date:'Date',total:'Grand total',
-      print:'🖨 Print / Save PDF',csv:'⬇ Export CSV'},
+      print:'🖨 Print / Save PDF',csv:'⬇ Export CSV',xlsx:'⬇ Export Excel',save:'💾 Save to app'},
   zh:{title:'报价单',sub:'录入供应商报价。产品按编号(REF)排序，小计与总计自动计算。',
       no:'序号',img:'图片',ref:'编号',name:'产品',qty:'数量',price:'单价',moq:'最小起订量',lead:'交货期',incoterm:'贸易术语',sample:'样品费',remark:'备注',line:'小计',
       supplier:'供应商',qref:'供应商报价单号',qdate:'报价日期',cur:'货币',from:'来自',date:'日期',total:'总计',
-      print:'🖨 打印 / 存为PDF',csv:'⬇ 导出CSV'}
+      print:'🖨 打印 / 存为PDF',csv:'⬇ 导出CSV',xlsx:'⬇ 导出Excel',save:'💾 保存到系统'}
 };
 const esc=s=>(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const params=new URLSearchParams(location.search);
@@ -76,7 +77,7 @@ async function load(){
   if(!ids.length){document.getElementById('app').innerHTML='<div class="loading">No products selected. Go back to the Products tab, tick some products, then click <b>Enter quotes</b>.</div>';return;}
   let brand='Interpoint';
   try{
-    const products=await api('products?select=id,ref,name,name_en,name_zh,image,qty,url&id=in.('+ids.join(',')+')');
+    const products=await api('products?select=id,ref,name,name_en,name_zh,image,qty,url,status&id=in.('+ids.join(',')+')');
     try{const s=await api("settings?select=brand&id=eq.app");if(s&&s[0]&&s[0].brand)brand=s[0].brand;}catch(e){}
     const byId={};products.forEach(p=>byId[p.id]=p);
     // keep requested order but then sort by REF (defensive — the opener already sorts)
@@ -118,9 +119,11 @@ function render(brand){
       <div class="fld"><label>${esc(Lx.cur)} 货币</label><input id="f_cur" value="EUR" style="min-width:80px"></div>
     </div>
     <div class="bar">
-      <button class="btn" onclick="window.print()">${Lx.print}</button>
-      <button class="btn green" onclick="exportCSV()">${Lx.csv}</button>
-      <span class="note" style="margin:0">${labelLang==='zh'?'提示：数据不会自动保存，请打印或导出CSV留存。':'Tip: entries are not auto-saved — print or export CSV to keep them.'}</span>
+      <button class="btn green" onclick="saveToApp()">${Lx.save}</button>
+      <button class="btn" onclick="exportXLSX()">${Lx.xlsx}</button>
+      <button class="btn ghost" onclick="exportCSV()">${Lx.csv}</button>
+      <button class="btn ghost" onclick="window.print()">${Lx.print}</button>
+      <span class="note" id="saveMsg" style="margin:0">${labelLang==='zh'?'“保存到系统”会把报价写入产品的“最优报价”。':'“Save to app” writes these into each product’s Best quote.'}</span>
     </div>
     <table><thead><tr>
       <th>${bi('no')}</th><th>${bi('img')}</th><th>${bi('ref')}</th><th>${bi('name')}</th>
@@ -173,6 +176,68 @@ function exportCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   const sup=(document.getElementById('f_supplier').value||'quotation').replace(/\W+/g,'_');
   a.download='quotation_'+sup+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ---- helpers shared by Excel export + Save to app ----
+const uid=p=>(p||'')+Math.random().toString(36).slice(2,9);
+const num=v=>{if(v===null||v===undefined||v==='')return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?null:n};
+function collectRows(){
+  return [...document.querySelectorAll('tbody tr')].map(tr=>{
+    const p=ITEMS.find(x=>x.id===tr.getAttribute('data-id'))||{};
+    const qtyStr=val(tr,'qty'); const qty=parseFloat(qtyStr)||0;
+    const price=parseFloat(val(tr,'price'));
+    return {p,tr,qtyStr,qty,price,moq:val(tr,'moq'),lead:val(tr,'lead'),incoterm:val(tr,'incoterm'),sample:val(tr,'sample'),remark:val(tr,'remark')};
+  });
+}
+async function writeApi(path,method,body,extra){
+  const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method,
+    headers:Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},extra||{}),
+    body:body?JSON.stringify(body):undefined});
+  if(!r.ok){throw new Error('HTTP '+r.status+' '+(await r.text()));}
+  return r;
+}
+
+function exportXLSX(){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded — use CSV instead.');return;}
+  const cur=document.getElementById('f_cur').value||'EUR';
+  const meta=[['QUOTATION'],['Supplier',document.getElementById('f_supplier').value],
+    ['Supplier quote ref',document.getElementById('f_qref').value],['Quote date',document.getElementById('f_qdate').value],
+    ['Currency',cur],['Exported',new Date().toLocaleString()],[]];
+  const head=['Ref','Product','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Sample_Cost','Remarks'];
+  const rows=collectRows(); let gt=0;
+  const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2); if(line!=='')gt+=r.qty*r.price;
+    return [r.p.ref||'',r.p.name||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.sample,r.remark];});
+  const aoa=meta.concat([head],data,[['','','','Grand total',+gt.toFixed(2),'','','','','']]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:10},{wch:46},{wch:6},{wch:11},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12},{wch:24}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Quotation');
+  const sup=(document.getElementById('f_supplier').value||'quotation').replace(/\W+/g,'_');
+  XLSX.writeFile(wb,'quotation_'+sup+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+async function saveToApp(){
+  const rows=collectRows().filter(r=>!isNaN(r.price));
+  if(!rows.length){alert('Enter at least one unit price first.');return;}
+  const msg=document.getElementById('saveMsg');
+  msg.innerHTML=labelLang==='zh'?'保存中…':'Saving…';
+  try{
+    const supName=(document.getElementById('f_supplier').value||'').trim();
+    let supId=null;
+    if(supName){ try{const sup=await api('suppliers?select=id,name');const m=sup.find(s=>(s.name||'').trim().toLowerCase()===supName.toLowerCase());if(m)supId=m.id;}catch(e){} }
+    const qref=(document.getElementById('f_qref').value||'').trim();
+    const qdate=document.getElementById('f_qdate').value||'';
+    const payload=rows.map(r=>{
+      const nb=[]; if(supName&&!supId)nb.push('Supplier: '+supName); if(qref)nb.push('Quote '+qref); if(qdate)nb.push(qdate); if(r.remark)nb.push(r.remark);
+      const qid=r.tr.getAttribute('data-qid')||uid('q'); r.tr.setAttribute('data-qid',qid);
+      return {id:qid,product_id:r.p.id,supplier_id:supId,price:r.price,moq:num(r.moq),lead:r.lead||null,incoterm:r.incoterm||null,sample:num(r.sample),notes:nb.join(' · ')||null};
+    });
+    await writeApi('quotes','POST',payload,{Prefer:'resolution=merge-duplicates'});
+    const toQ=rows.filter(r=>r.p.status==='New').map(r=>r.p.id);
+    if(toQ.length){ try{ await writeApi('products?id=in.('+toQ.join(',')+')','PATCH',{status:'Quoted'},{Prefer:'return=minimal'}); rows.forEach(r=>{if(r.p.status==='New')r.p.status='Quoted';}); }catch(e){} }
+    msg.innerHTML='<b style="color:#1a8f4c">✓ '+(labelLang==='zh'?('已保存 '+payload.length+' 条报价到系统。'):('Saved '+payload.length+' quote(s) to the app — refresh the Products tab to see Best quote.'))+'</b>';
+  }catch(e){
+    msg.innerHTML='<b style="color:#c00">'+(labelLang==='zh'?'保存失败：':'Save failed: ')+esc(e.message)+'</b>';
+  }
 }
 load();
 </script>
