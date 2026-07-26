@@ -77,6 +77,10 @@
   .overlay{position:fixed;inset:0;background:rgba(15,39,64,.45);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow:auto;padding:40px 16px}
   .overlay.show{display:flex}
   .modal{background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal.wide{max-width:1120px}
+  input.qe{border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;box-sizing:border-box}
+  #qeTable th{position:sticky;top:0;background:#0f2740;color:#fff;font-weight:600;font-size:11px;padding:6px 7px;white-space:nowrap}
+  #qeTable td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
   .modal .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
   .modal .mh h3{margin:0;font-size:16px}
   .modal .mb{padding:18px 20px;max-height:70vh;overflow:auto}
@@ -549,7 +553,7 @@ function quotesTable(pid){
 
 /* ---------- modal ---------- */
 function openModal(t,b,f){document.getElementById('mTitle').textContent=t;document.getElementById('mBody').innerHTML=b;document.getElementById('mFoot').innerHTML=f;document.getElementById('overlay').classList.add('show');translateUI(document.getElementById('overlay'))}
-function closeModal(){document.getElementById('overlay').classList.remove('show')}
+function closeModal(){document.getElementById('overlay').classList.remove('show');const m=document.querySelector('#overlay .modal');if(m)m.classList.remove('wide')}
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeModal()});
 
 /* ---------- product CRUD ---------- */
@@ -891,13 +895,120 @@ function copyRfqLink(){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(()=>show(true)).catch(()=>show(false));}
   else show(false);
 }
-// Open the "Enter quotes" form: selected products, ranked by REF, for manual quote entry
+// "Enter quotes": inline modal grid of the ticked products, ranked by REF.
+// Enter supplier quotes here — no separate page — then Save to app / export Excel, HTML, PDF.
+let QE_ITEMS=[];
 function openQuoteForm(){
   const items=rfqSelected();
   if(!items.length){alert('No products selected. Tick products in the list first (search / filter to find them).');return;}
-  const ids=items.slice().sort((a,b)=>String(a.ref||'').localeCompare(String(b.ref||''))).map(p=>p.id);
-  window.open('quote.html?ids='+ids.join(','),'_blank');
+  QE_ITEMS=items.slice().sort((a,b)=>String(a.ref||'').localeCompare(String(b.ref||'')));
+  const today=new Date().toISOString().slice(0,10);
+  const rows=QE_ITEMS.map((p,i)=>`<tr data-id="${esc(p.id)}">
+    <td>${i+1}</td><td class="muted" style="white-space:nowrap;font-weight:600">${esc(p.ref||'')}</td>
+    <td style="min-width:150px;font-size:12px">${esc(p.name)}</td>
+    <td><input class="qe" data-f="qty" type="number" min="0" value="${p.qty!=null?p.qty:''}" oninput="qeRecalc()" style="width:60px;text-align:right"></td>
+    <td><input class="qe" data-f="price" type="number" min="0" step="0.01" oninput="qeRecalc()" style="width:78px;text-align:right" placeholder="0.00"></td>
+    <td><input class="qe" data-f="moq" style="width:66px"></td>
+    <td><input class="qe" data-f="lead" style="width:78px"></td>
+    <td><input class="qe" data-f="incoterm" style="width:64px" placeholder="FOB"></td>
+    <td><input class="qe" data-f="sample" style="width:64px"></td>
+    <td><input class="qe" data-f="remark" style="width:120px"></td>
+    <td class="right" data-line style="white-space:nowrap;font-weight:600">—</td></tr>`).join('');
+  const body=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="fld"><label>Supplier</label><input id="qe_sup" placeholder="name (auto-linked if it exists)"></div>
+      <div class="fld"><label>Quote ref</label><input id="qe_ref"></div>
+      <div class="fld"><label>Quote date</label><input id="qe_date" type="date" value="${today}"></div>
+      <div class="fld"><label>Currency</label><input id="qe_cur" value="EUR" style="width:80px" oninput="qeRecalc()"></div>
+    </div>
+    <div style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px">
+      <table id="qeTable" style="border-collapse:collapse;width:100%"><thead><tr>
+        <th>#</th><th>Ref</th><th>Product</th><th>Qty</th><th>Unit price</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Sample</th><th>Remarks</th><th class="right">Line</th>
+      </tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="10" class="right" style="padding:8px"><b>Grand total (<span id="qe_curl">EUR</span>)</b></td><td class="right" style="padding:8px"><b id="qe_total">—</b></td></tr></tfoot></table>
+    </div>
+    <p class="hint" id="qe_msg" style="margin:8px 0 0"><b>${QE_ITEMS.length}</b> products, ranked by REF. Enter what the supplier quoted, then Save to app or export.</p>`;
+  const foot=`<button class="btn ghost" onclick="closeModal()">Close</button>
+    <button class="btn ghost" onclick="qeHTML()">⬇ HTML</button>
+    <button class="btn ghost" onclick="qePDF()">🖨 PDF</button>
+    <button class="btn" onclick="qeXLSX()">⬇ Excel</button>
+    <button class="btn green" onclick="qeSave()">💾 Save to app</button>`;
+  openModal('Enter quotes',body,foot);
+  const m=document.querySelector('#overlay .modal');if(m)m.classList.add('wide');
+  qeRecalc();
 }
+function qeVal(tr,f){const el=tr.querySelector('[data-f="'+f+'"]');return el?el.value:'';}
+function qeCollect(){
+  return [...document.querySelectorAll('#qeTable tbody tr')].map(tr=>{
+    const p=QE_ITEMS.find(x=>x.id===tr.getAttribute('data-id'))||{};
+    const qtyStr=qeVal(tr,'qty');const qty=parseFloat(qtyStr)||0;const price=parseFloat(qeVal(tr,'price'));
+    return {p,tr,qtyStr,qty,price,moq:qeVal(tr,'moq'),lead:qeVal(tr,'lead'),incoterm:qeVal(tr,'incoterm'),sample:qeVal(tr,'sample'),remark:qeVal(tr,'remark')};
+  });
+}
+function qeRecalc(){
+  const cur=(document.getElementById('qe_cur').value||'EUR');
+  document.getElementById('qe_curl').textContent=cur;
+  let gt=0,any=false;
+  document.querySelectorAll('#qeTable tbody tr').forEach(tr=>{
+    const qty=parseFloat(qeVal(tr,'qty'))||0;const price=parseFloat(qeVal(tr,'price'));
+    const cell=tr.querySelector('[data-line]');
+    if(!isNaN(price)){const line=qty*price;gt+=line;any=true;cell.textContent=line.toFixed(2);}else cell.textContent='—';
+  });
+  document.getElementById('qe_total').textContent=any?gt.toFixed(2):'—';
+}
+async function qeSave(){
+  const rows=qeCollect().filter(r=>!isNaN(r.price));
+  if(!rows.length){alert('Enter at least one unit price.');return;}
+  const msg=document.getElementById('qe_msg');msg.textContent='Saving…';
+  const supName=(document.getElementById('qe_sup').value||'').trim();
+  let supId='';if(supName){const m=S.suppliers.find(s=>(s.name||'').trim().toLowerCase()===supName.toLowerCase());if(m)supId=m.id;}
+  const qref=(document.getElementById('qe_ref').value||'').trim();const qdate=document.getElementById('qe_date').value||'';
+  const payload=rows.map(r=>{
+    const nb=[];if(supName&&!supId)nb.push('Supplier: '+supName);if(qref)nb.push('Quote '+qref);if(qdate)nb.push(qdate);if(r.remark)nb.push(r.remark);
+    const qid=r.tr.getAttribute('data-qid')||uid('q');r.tr.setAttribute('data-qid',qid);
+    return {id:qid,productId:r.p.id,supplierId:supId,price:r.price,moq:num(r.moq),lead:r.lead,incoterm:r.incoterm,sample:num(r.sample),notes:nb.join(' · ')};
+  });
+  try{
+    const {error}=await db.from('quotes').upsert(payload.map(quoteToRow));if(error)throw error;
+    payload.forEach(q=>upsertLocal('quotes',q));
+    const toQ=rows.filter(r=>r.p.status==='New').map(r=>r.p.id);
+    if(toQ.length){await db.from('products').update({status:'Quoted'}).in('id',toQ);S.products.forEach(p=>{if(toQ.includes(p.id))p.status='Quoted';});}
+    renderAll();
+    msg.innerHTML='<b style="color:var(--ok)">✓ Saved '+payload.length+' quote(s). Best quote updated in the Products list.</b>';
+  }catch(e){msg.innerHTML='<b style="color:#c00">Save failed: '+esc(e.message)+'</b>';}
+}
+function qeDocHTML(){
+  const cur=document.getElementById('qe_cur').value||'EUR';
+  const sup=document.getElementById('qe_sup').value||'';const qref=document.getElementById('qe_ref').value||'';const qdate=document.getElementById('qe_date').value||'';
+  const rows=qeCollect();let gt=0;
+  const body=rows.map((r,i)=>{const line=isNaN(r.price)?'':(r.qty*r.price);if(line!=='')gt+=line;
+    return `<tr><td>${i+1}</td><td>${esc(r.p.ref||'')}</td><td>${esc(r.p.name||'')}</td><td class="r">${esc(r.qtyStr||'')}</td><td class="r">${isNaN(r.price)?'':r.price.toFixed(2)}</td><td class="r">${line===''?'':line.toFixed(2)}</td><td>${esc(r.moq)}</td><td>${esc(r.lead)}</td><td>${esc(r.incoterm)}</td><td>${esc(r.remark)}</td></tr>`;}).join('');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quotation</title><style>
+    body{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif;color:#1a2433;padding:26px}
+    h1{color:#0f2740;margin:0 0 4px}.meta{font-size:13px;color:#555;margin-bottom:14px}
+    table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #bbb;padding:5px 7px}
+    th{background:#0f2740;color:#fff}.r{text-align:right}tfoot td{font-weight:700;background:#eef5ff}</style></head><body>
+    <h1>Quotation</h1>
+    <div class="meta">Supplier: ${esc(sup||'—')} &nbsp;|&nbsp; Quote ref: ${esc(qref||'—')} &nbsp;|&nbsp; Date: ${esc(qdate||new Date().toISOString().slice(0,10))} &nbsp;|&nbsp; Currency: ${esc(cur)} &nbsp;|&nbsp; ✉ jarrodliu@hotmail.com</div>
+    <table><thead><tr><th>#</th><th>Ref</th><th>Product</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Line</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="5" class="r">Grand total (${esc(cur)})</td><td class="r">${gt.toFixed(2)}</td><td colspan="4"></td></tr></tfoot></table></body></html>`;
+}
+function qeFname(ext){return 'quotation_'+((document.getElementById('qe_sup').value||'quote').replace(/\W+/g,'_'))+'_'+new Date().toISOString().slice(0,10)+'.'+ext;}
+function qeHTML(){const blob=new Blob([qeDocHTML()],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=qeFname('html');a.click();}
+function qePDF(){const w=window.open('','_blank');w.document.write(qeDocHTML()+'<scr'+'ipt>window.onload=function(){window.print()}</scr'+'ipt>');w.document.close();}
+function ensureXLSX(cb){if(typeof XLSX!=='undefined')return cb();const s=document.createElement('script');s.src='xlsx.full.min.js';s.onload=cb;s.onerror=()=>alert('Could not load the Excel library (xlsx.full.min.js).');document.head.appendChild(s);}
+function qeXLSX(){ ensureXLSX(()=>{
+  const cur=document.getElementById('qe_cur').value||'EUR';
+  const meta=[['QUOTATION'],['Supplier',document.getElementById('qe_sup').value],['Quote ref',document.getElementById('qe_ref').value],['Quote date',document.getElementById('qe_date').value],['Currency',cur],['Exported',new Date().toLocaleString()],[]];
+  const head=['Ref','Product','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Sample','Remarks'];
+  const rows=qeCollect();let gt=0;
+  const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2);if(line!=='')gt+=r.qty*r.price;
+    return [r.p.ref||'',r.p.name||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.sample,r.remark];});
+  const aoa=meta.concat([head],data,[['','','','Grand total',+gt.toFixed(2),'','','','','']]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:10},{wch:44},{wch:6},{wch:11},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:22}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quotation');XLSX.writeFile(wb,qeFname('xlsx'));
+});}
 const RFQ_L={
   en:{title:'Request for Quotation',sub:'Please fill in the blank columns and return this sheet.',no:'No.',img:'Image',ref:'Ref',name:'Product',desc:'Description',url:'Product URL',imgurl:'Image URL',link:'Link',view:'Open',qty:'Required Qty',price:'Unit Price (EUR)',moq:'MOQ',lead:'Lead Time',incoterm:'Incoterm',sample:'Sample Cost (EUR)',remark:'Remarks',supplier:'Supplier',date:'Date',from:'From'},
   zh:{title:'询价单',sub:'请填写空白栏并回传此表。',no:'序号',img:'图片',ref:'编号',name:'产品',desc:'描述',url:'产品链接',imgurl:'图片链接',link:'链接',view:'查看',qty:'需求数量',price:'单价(欧元)',moq:'最小起订量',lead:'交货期',incoterm:'贸易术语',sample:'样品费(欧元)',remark:'备注',supplier:'供应商',date:'日期',from:'来自'}
