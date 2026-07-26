@@ -104,7 +104,6 @@ function render(brand){
     <td><input class="q" data-f="moq" type="text" placeholder=""></td>
     <td><input class="q" data-f="lead" type="text" placeholder=""></td>
     <td><input class="q" data-f="incoterm" type="text" placeholder="FOB / EXW…"></td>
-    <td><input class="q" data-f="sample" type="text" placeholder=""></td>
     <td><input class="q" data-f="remark" type="text" placeholder=""></td>
     <td class="money line" data-line>—</td>
   </tr>`).join('');
@@ -128,10 +127,10 @@ function render(brand){
     <table><thead><tr>
       <th>${bi('no')}</th><th>${bi('img')}</th><th>${bi('ref')}</th><th>${bi('name')}</th>
       <th>${bi('qty')}</th><th>${bi('price')}</th><th>${bi('moq')}</th><th>${bi('lead')}</th>
-      <th>${bi('incoterm')}</th><th>${bi('sample')}</th><th>${bi('remark')}</th><th>${bi('line')}</th>
+      <th>${bi('incoterm')}</th><th>${bi('remark')}</th><th>${bi('line')}</th>
     </tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="11" class="money">${esc(Lx.total)} · <span id="g_cur">EUR</span></td><td class="money" id="g_total">—</td></tr></tfoot>
+    <tfoot><tr><td colspan="10" class="money">${esc(Lx.total)} · <span id="g_cur">EUR</span></td><td class="money" id="g_total">—</td></tr></tfoot>
     </table>`;
   document.getElementById('f_cur').addEventListener('input',recalc);
   recalc();
@@ -157,7 +156,7 @@ function exportCSV(){
   const meta=[['QUOTATION'],['Supplier',document.getElementById('f_supplier').value],
     ['Supplier quote ref',document.getElementById('f_qref').value],['Quote date',document.getElementById('f_qdate').value],
     ['Currency',cur],['Exported',new Date().toLocaleString()],[]];
-  const head=['Ref','Product','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Sample_Cost','Remarks'];
+  const head=['Ref','Product','Image_URL','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks'];
   const lines=meta.map(r=>r.map(q).join(','));
   lines.push(head.map(q).join(','));
   let gt=0;
@@ -168,8 +167,8 @@ function exportCSV(){
     const price=parseFloat(val(tr,'price'));
     const line=isNaN(price)?'':(qty*price).toFixed(2);
     if(line!=='')gt+=qty*price;
-    lines.push([p.ref||'',p.name||'',qtyStr,isNaN(price)?'':price.toFixed(2),line,
-      val(tr,'moq'),val(tr,'lead'),val(tr,'incoterm'),val(tr,'sample'),val(tr,'remark')].map(q).join(','));
+    lines.push([p.ref||'',p.name||'',p.image||'',qtyStr,isNaN(price)?'':price.toFixed(2),line,
+      val(tr,'moq'),val(tr,'lead'),val(tr,'incoterm'),val(tr,'remark')].map(q).join(','));
   });
   lines.push(['','','','','Grand total '+gt.toFixed(2),'','','','',''].map(q).join(','));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
@@ -186,7 +185,7 @@ function collectRows(){
     const p=ITEMS.find(x=>x.id===tr.getAttribute('data-id'))||{};
     const qtyStr=val(tr,'qty'); const qty=parseFloat(qtyStr)||0;
     const price=parseFloat(val(tr,'price'));
-    return {p,tr,qtyStr,qty,price,moq:val(tr,'moq'),lead:val(tr,'lead'),incoterm:val(tr,'incoterm'),sample:val(tr,'sample'),remark:val(tr,'remark')};
+    return {p,tr,qtyStr,qty,price,moq:val(tr,'moq'),lead:val(tr,'lead'),incoterm:val(tr,'incoterm'),remark:val(tr,'remark')};
   });
 }
 async function writeApi(path,method,body,extra){
@@ -203,13 +202,13 @@ function exportXLSX(){
   const meta=[['QUOTATION'],['Supplier',document.getElementById('f_supplier').value],
     ['Supplier quote ref',document.getElementById('f_qref').value],['Quote date',document.getElementById('f_qdate').value],
     ['Currency',cur],['Exported',new Date().toLocaleString()],[]];
-  const head=['Ref','Product','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Sample_Cost','Remarks'];
+  const head=['Ref','Product','Image_URL','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks'];
   const rows=collectRows(); let gt=0;
   const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2); if(line!=='')gt+=r.qty*r.price;
-    return [r.p.ref||'',r.p.name||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.sample,r.remark];});
-  const aoa=meta.concat([head],data,[['','','','Grand total',+gt.toFixed(2),'','','','','']]);
+    return [r.p.ref||'',r.p.name||'',r.p.image||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.remark];});
+  const aoa=meta.concat([head],data,[['','','','','Grand total',+gt.toFixed(2),'','','','']]);
   const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=[{wch:10},{wch:46},{wch:6},{wch:11},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12},{wch:24}];
+  ws['!cols']=[{wch:10},{wch:46},{wch:34},{wch:6},{wch:11},{wch:12},{wch:10},{wch:12},{wch:10},{wch:24}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Quotation');
   const sup=(document.getElementById('f_supplier').value||'quotation').replace(/\W+/g,'_');
   XLSX.writeFile(wb,'quotation_'+sup+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
@@ -229,7 +228,7 @@ async function saveToApp(){
     const payload=rows.map(r=>{
       const nb=[]; if(supName&&!supId)nb.push('Supplier: '+supName); if(qref)nb.push('Quote '+qref); if(qdate)nb.push(qdate); if(r.remark)nb.push(r.remark);
       const qid=r.tr.getAttribute('data-qid')||uid('q'); r.tr.setAttribute('data-qid',qid);
-      return {id:qid,product_id:r.p.id,supplier_id:supId,price:r.price,moq:num(r.moq),lead:r.lead||null,incoterm:r.incoterm||null,sample:num(r.sample),notes:nb.join(' · ')||null};
+      return {id:qid,product_id:r.p.id,supplier_id:supId,price:r.price,moq:num(r.moq),lead:r.lead||null,incoterm:r.incoterm||null,sample:null,notes:nb.join(' · ')||null};
     });
     await writeApi('quotes','POST',payload,{Prefer:'resolution=merge-duplicates'});
     const toQ=rows.filter(r=>r.p.status==='New').map(r=>r.p.id);

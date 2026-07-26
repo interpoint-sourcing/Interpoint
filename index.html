@@ -905,13 +905,13 @@ function openQuoteForm(){
   const today=new Date().toISOString().slice(0,10);
   const rows=QE_ITEMS.map((p,i)=>`<tr data-id="${esc(p.id)}">
     <td>${i+1}</td><td class="muted" style="white-space:nowrap;font-weight:600">${esc(p.ref||'')}</td>
+    <td>${p.image?`<img src="${esc(p.image)}" loading="lazy" style="width:38px;height:38px;object-fit:cover;border-radius:4px">`:''}</td>
     <td style="min-width:150px;font-size:12px">${esc(p.name)}</td>
     <td><input class="qe" data-f="qty" type="number" min="0" value="${p.qty!=null?p.qty:''}" oninput="qeRecalc()" style="width:60px;text-align:right"></td>
     <td><input class="qe" data-f="price" type="number" min="0" step="0.01" oninput="qeRecalc()" style="width:78px;text-align:right" placeholder="0.00"></td>
     <td><input class="qe" data-f="moq" style="width:66px"></td>
     <td><input class="qe" data-f="lead" style="width:78px"></td>
     <td><input class="qe" data-f="incoterm" style="width:64px" placeholder="FOB"></td>
-    <td><input class="qe" data-f="sample" style="width:64px"></td>
     <td><input class="qe" data-f="remark" style="width:120px"></td>
     <td class="right" data-line style="white-space:nowrap;font-weight:600">—</td></tr>`).join('');
   const body=`
@@ -923,7 +923,7 @@ function openQuoteForm(){
     </div>
     <div style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px">
       <table id="qeTable" style="border-collapse:collapse;width:100%"><thead><tr>
-        <th>#</th><th>Ref</th><th>Product</th><th>Qty</th><th>Unit price</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Sample</th><th>Remarks</th><th class="right">Line</th>
+        <th>#</th><th>Ref</th><th>Img</th><th>Product</th><th>Qty</th><th>Unit price</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th><th class="right">Line</th>
       </tr></thead><tbody>${rows}</tbody>
       <tfoot><tr><td colspan="10" class="right" style="padding:8px"><b>Grand total (<span id="qe_curl">EUR</span>)</b></td><td class="right" style="padding:8px"><b id="qe_total">—</b></td></tr></tfoot></table>
     </div>
@@ -942,7 +942,7 @@ function qeCollect(){
   return [...document.querySelectorAll('#qeTable tbody tr')].map(tr=>{
     const p=QE_ITEMS.find(x=>x.id===tr.getAttribute('data-id'))||{};
     const qtyStr=qeVal(tr,'qty');const qty=parseFloat(qtyStr)||0;const price=parseFloat(qeVal(tr,'price'));
-    return {p,tr,qtyStr,qty,price,moq:qeVal(tr,'moq'),lead:qeVal(tr,'lead'),incoterm:qeVal(tr,'incoterm'),sample:qeVal(tr,'sample'),remark:qeVal(tr,'remark')};
+    return {p,tr,qtyStr,qty,price,moq:qeVal(tr,'moq'),lead:qeVal(tr,'lead'),incoterm:qeVal(tr,'incoterm'),remark:qeVal(tr,'remark')};
   });
 }
 function qeRecalc(){
@@ -966,7 +966,7 @@ async function qeSave(){
   const payload=rows.map(r=>{
     const nb=[];if(supName&&!supId)nb.push('Supplier: '+supName);if(qref)nb.push('Quote '+qref);if(qdate)nb.push(qdate);if(r.remark)nb.push(r.remark);
     const qid=r.tr.getAttribute('data-qid')||uid('q');r.tr.setAttribute('data-qid',qid);
-    return {id:qid,productId:r.p.id,supplierId:supId,price:r.price,moq:num(r.moq),lead:r.lead,incoterm:r.incoterm,sample:num(r.sample),notes:nb.join(' · ')};
+    return {id:qid,productId:r.p.id,supplierId:supId,price:r.price,moq:num(r.moq),lead:r.lead,incoterm:r.incoterm,sample:null,notes:nb.join(' · ')};
   });
   try{
     const {error}=await db.from('quotes').upsert(payload.map(quoteToRow));if(error)throw error;
@@ -982,17 +982,17 @@ function qeDocHTML(){
   const sup=document.getElementById('qe_sup').value||'';const qref=document.getElementById('qe_ref').value||'';const qdate=document.getElementById('qe_date').value||'';
   const rows=qeCollect();let gt=0;
   const body=rows.map((r,i)=>{const line=isNaN(r.price)?'':(r.qty*r.price);if(line!=='')gt+=line;
-    return `<tr><td>${i+1}</td><td>${esc(r.p.ref||'')}</td><td>${esc(r.p.name||'')}</td><td class="r">${esc(r.qtyStr||'')}</td><td class="r">${isNaN(r.price)?'':r.price.toFixed(2)}</td><td class="r">${line===''?'':line.toFixed(2)}</td><td>${esc(r.moq)}</td><td>${esc(r.lead)}</td><td>${esc(r.incoterm)}</td><td>${esc(r.remark)}</td></tr>`;}).join('');
+    return `<tr><td>${i+1}</td><td>${esc(r.p.ref||'')}</td><td class="im">${r.p.image?`<img src="${esc(r.p.image)}">`:''}</td><td>${esc(r.p.name||'')}</td><td class="r">${esc(r.qtyStr||'')}</td><td class="r">${isNaN(r.price)?'':r.price.toFixed(2)}</td><td class="r">${line===''?'':line.toFixed(2)}</td><td>${esc(r.moq)}</td><td>${esc(r.lead)}</td><td>${esc(r.incoterm)}</td><td>${esc(r.remark)}</td></tr>`;}).join('');
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quotation</title><style>
     body{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif;color:#1a2433;padding:26px}
     h1{color:#0f2740;margin:0 0 4px}.meta{font-size:13px;color:#555;margin-bottom:14px}
     table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #bbb;padding:5px 7px}
-    th{background:#0f2740;color:#fff}.r{text-align:right}tfoot td{font-weight:700;background:#eef5ff}</style></head><body>
+    th{background:#0f2740;color:#fff}.r{text-align:right}td.im{padding:2px}td.im img{width:60px;height:60px;object-fit:cover;border-radius:4px;display:block}tfoot td{font-weight:700;background:#eef5ff}</style></head><body>
     <h1>Quotation</h1>
     <div class="meta">Supplier: ${esc(sup||'—')} &nbsp;|&nbsp; Quote ref: ${esc(qref||'—')} &nbsp;|&nbsp; Date: ${esc(qdate||new Date().toISOString().slice(0,10))} &nbsp;|&nbsp; Currency: ${esc(cur)} &nbsp;|&nbsp; ✉ jarrodliu@hotmail.com</div>
-    <table><thead><tr><th>#</th><th>Ref</th><th>Product</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Line</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Ref</th><th>Image</th><th>Product</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Line</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th></tr></thead>
     <tbody>${body}</tbody>
-    <tfoot><tr><td colspan="5" class="r">Grand total (${esc(cur)})</td><td class="r">${gt.toFixed(2)}</td><td colspan="4"></td></tr></tfoot></table></body></html>`;
+    <tfoot><tr><td colspan="6" class="r">Grand total (${esc(cur)})</td><td class="r">${gt.toFixed(2)}</td><td colspan="4"></td></tr></tfoot></table></body></html>`;
 }
 function qeFname(ext){return 'quotation_'+((document.getElementById('qe_sup').value||'quote').replace(/\W+/g,'_'))+'_'+new Date().toISOString().slice(0,10)+'.'+ext;}
 function qeHTML(){const blob=new Blob([qeDocHTML()],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=qeFname('html');a.click();}
@@ -1001,12 +1001,12 @@ function ensureXLSX(cb){if(typeof XLSX!=='undefined')return cb();const s=documen
 function qeXLSX(){ ensureXLSX(()=>{
   const cur=document.getElementById('qe_cur').value||'EUR';
   const meta=[['QUOTATION'],['Supplier',document.getElementById('qe_sup').value],['Quote ref',document.getElementById('qe_ref').value],['Quote date',document.getElementById('qe_date').value],['Currency',cur],['Exported',new Date().toLocaleString()],[]];
-  const head=['Ref','Product','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Sample','Remarks'];
+  const head=['Ref','Product','Image_URL','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks'];
   const rows=qeCollect();let gt=0;
   const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2);if(line!=='')gt+=r.qty*r.price;
-    return [r.p.ref||'',r.p.name||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.sample,r.remark];});
-  const aoa=meta.concat([head],data,[['','','','Grand total',+gt.toFixed(2),'','','','','']]);
-  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:10},{wch:44},{wch:6},{wch:11},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:22}];
+    return [r.p.ref||'',r.p.name||'',r.p.image||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.remark];});
+  const aoa=meta.concat([head],data,[['','','','','Grand total',+gt.toFixed(2),'','','','']]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:10},{wch:44},{wch:34},{wch:6},{wch:11},{wch:12},{wch:10},{wch:10},{wch:10},{wch:22}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quotation');XLSX.writeFile(wb,qeFname('xlsx'));
 });}
 const RFQ_L={
