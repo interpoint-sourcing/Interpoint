@@ -142,6 +142,9 @@
     <button data-v="data">Import / Export</button>
   </nav>
   <div class="userbox">
+    <span id="sectoggle" title="Switch catalogue section" style="display:inline-flex;gap:2px;font-size:12.5px;background:rgba(255,255,255,.12);border-radius:6px;padding:2px;margin-right:8px">
+      <span data-s="medical" onclick="setSection('medical')" style="cursor:pointer;padding:4px 9px;border-radius:5px">🩺 Medical</span>
+      <span data-s="hotel" onclick="setSection('hotel')" style="cursor:pointer;padding:4px 9px;border-radius:5px">🏨 Hotel Supply</span></span>
     <span id="langtoggle" style="display:inline-flex;gap:2px;font-size:12.5px;background:rgba(255,255,255,.12);border-radius:6px;padding:2px">
       <span data-l="en" onclick="applyUILang('en')" style="cursor:pointer;padding:4px 9px;border-radius:5px">EN</span>
       <span data-l="zh" onclick="applyUILang('zh')" style="cursor:pointer;padding:4px 9px;border-radius:5px">中文</span></span>
@@ -357,6 +360,16 @@ function applyUILang(l){
   renderAll();
 }
 let rfqPick=new Set(), lastFilteredIds=[];
+// ---- catalogue section (Medical vs Hotel Supply); derived from ref prefix, no schema change ----
+let SECTION=localStorage.getItem('section')||'medical';
+const productSection=p=>/^HOT/i.test(p.ref||'')?'hotel':'medical';
+const inSection=p=>productSection(p)===SECTION;
+function secProducts(){return S.products.filter(inSection);}
+function updateSectionToggle(){document.querySelectorAll('#sectoggle [data-s]').forEach(s=>{const on=s.dataset.s===SECTION;s.style.background=on?'#fff':'transparent';s.style.color=on?'#0f2740':'#cfe0f0';});}
+function setSection(s){SECTION=(s==='hotel')?'hotel':'medical';localStorage.setItem('section',SECTION);rfqPick.clear();updateSectionToggle();fillFilters();renderProducts();renderDash();
+  const t=document.querySelector('#v-products .title');if(t)t.textContent=(SECTION==='hotel')?'Hotel Supply — products to source':'Products to source';}
+function nextRef(section){const pre=(section==='hotel')?'HOT-':'MED-';let max=0;S.products.forEach(p=>{const r=(p.ref||'').toUpperCase();if(r.startsWith(pre)){const n=parseInt(r.slice(4));if(!isNaN(n)&&n>max)max=n;}});return pre+String(max+1).padStart(4,'0');}
+function catOptions(selected){const set=new Set();if(SECTION==='medical')CATS.forEach(c=>set.add(c.k));secProducts().forEach(p=>{if(p.category)set.add(p.category);});if(selected)set.add(selected);return [...set].sort((a,b)=>String(a).localeCompare(String(b))).map(k=>`<option ${k===selected?'selected':''}>${esc(k)}</option>`).join('');}
 let I18N={"cat":{"Diagnostics":{"zh":"诊断","hr":"Dijagnostika"},"Instruments":{"zh":"器械","hr":"Instrumenti"},"Office & practice":{"zh":"诊室设备","hr":"Ordinacija"},"Furniture":{"zh":"家具","hr":"Namještaj"},"Consumables":{"zh":"耗材","hr":"Potrošni materijal"},"Surgery":{"zh":"外科","hr":"Kirurgija"},"Emergency":{"zh":"急救","hr":"Hitna pomoć"},"Veterinary":{"zh":"兽医","hr":"Veterina"},"Home pharmacy":{"zh":"家庭药箱","hr":"Kućna ljekarna"},"Hygiene & protection":{"zh":"卫生与防护","hr":"Higijena i zaštita"},"Professional literature":{"zh":"专业文献","hr":"Stručna literatura"},"Other":{"zh":"其他","hr":"Ostalo"}},"sub":{"Stethoscopes":{"zh":"听诊器","hr":"Stetoskopi"},"Blood pressure monitors":{"zh":"血压计","hr":"Tlakomjeri"},"Otoscopes":{"zh":"耳镜","hr":"Otoskopi"},"Ophthalmoscopes":{"zh":"检眼镜","hr":"Oftalmoskopi"},"Dermatoscopes":{"zh":"皮肤镜","hr":"Dermatoskopi"},"Diagnostic lights":{"zh":"诊断灯","hr":"Dijagnostičke svjetiljke"},"Thermometers":{"zh":"体温计","hr":"Toplomjeri"},"ECG":{"zh":"心电图","hr":"EKG"},"Holter monitors":{"zh":"动态监测仪 (Holter)","hr":"Holteri"},"Blood & urine analysis":{"zh":"血液和尿液分析","hr":"Analiza krvi i urina"},"Rapid tests":{"zh":"快速检测","hr":"Brzi testovi"},"Audiometry":{"zh":"听力测定","hr":"Audiometrija"},"Spirometry":{"zh":"肺活量测定","hr":"Spirometrija"},"Pulse oximeters":{"zh":"脉搏血氧仪","hr":"Pulsni oksimetri"},"Ultrasound":{"zh":"超声","hr":"Ultrazvuk"},"CTG, Doppler":{"zh":"胎心监护 / 多普勒","hr":"CTG, Doppler"},"Anoscopes, colposcopes":{"zh":"肛门镜、阴道镜","hr":"Anoskopi, kolposkopi"},"Alcohol tester":{"zh":"酒精检测仪","hr":"Alkohol tester"},"Other diagnostics":{"zh":"其他诊断","hr":"Ostala dijagnostika"},"Patient monitors":{"zh":"生命体征监护仪","hr":"Monitori vitalnih funkcija"},"Dental medicine":{"zh":"牙科","hr":"Dentalna medicina"},"Dimeda instruments":{"zh":"Dimeda 器械","hr":"Dimeda instrumenti"},"Instrument sets":{"zh":"器械套装","hr":"Setovi instrumenata"},"Scissors":{"zh":"剪刀","hr":"Škare"},"Forceps & holders":{"zh":"镊子与钳","hr":"Pincete i hvatalice"},"Scalpels":{"zh":"手术刀","hr":"Skalpeli"},"Needle holders":{"zh":"持针器","hr":"Iglodržači"},"Aspiration cannulas":{"zh":"吸引套管","hr":"Aspiracijske kanile"},"Gynecological instruments":{"zh":"妇科器械","hr":"Ginekološki instrumenti"},"Other instruments":{"zh":"其他器械","hr":"Ostali instrumenti"},"Therapeutic devices":{"zh":"治疗设备","hr":"Terapijski uređaji"},"Electrosurgery":{"zh":"电外科","hr":"Elektrokirurgija"},"Oxygen for offices":{"zh":"诊室供氧","hr":"Kisik za ordinacije"},"Infusion":{"zh":"输液","hr":"Infuzija"},"Scales & height measures":{"zh":"体重秤与身高计","hr":"Vage i visinomjeri"},"Other measuring instruments":{"zh":"其他测量仪器","hr":"Ostali mjerni instrumenti"},"Lighting":{"zh":"照明","hr":"Rasvjeta"},"Lightboxes":{"zh":"阅片灯","hr":"Negatoskopi"},"Doctor's bags":{"zh":"出诊包","hr":"Liječničke torbe"},"Sterilization":{"zh":"灭菌","hr":"Sterilizacija"},"Ear rinsing":{"zh":"洗耳","hr":"Ispiranje uha"},"Anatomical models":{"zh":"解剖模型","hr":"Anatomski modeli"},"Laboratory equipment":{"zh":"实验室设备","hr":"Laboratorijska oprema"},"Throat spatulas":{"zh":"压舌板","hr":"Špatule za pregled grla"},"Stomach rinsing sets":{"zh":"洗胃套装","hr":"Setovi za ispiranje želuca"},"Wooden sticks":{"zh":"木棒","hr":"Drveni štapići"},"Office supplies":{"zh":"办公用品","hr":"Uredski pribor"},"Watches":{"zh":"计时器","hr":"Satovi"},"Examination beds":{"zh":"检查床","hr":"Pregledni ležajevi"},"Patient transport carts":{"zh":"患者转运车","hr":"Transportna kolica za pacijente"},"Screens":{"zh":"屏风","hr":"Paravani"},"Steps":{"zh":"脚踏凳","hr":"Stepenice"},"Medical carts":{"zh":"医用推车","hr":"Medicinska kolica"},"Office cabinets":{"zh":"诊室柜","hr":"Ormari za ordinaciju"},"Filing cabinets":{"zh":"文件柜","hr":"Kartotečni ormari"},"Work chairs & tables":{"zh":"工作椅与桌","hr":"Radne stolice i stolovi"},"Pediatric furniture":{"zh":"儿科家具","hr":"Pedijatrijski namještaj"},"Patient bedside furniture":{"zh":"患者床头家具","hr":"Ormarići i stolići za pacijente"},"Needles & Vacutainer systems":{"zh":"针头与真空采血系统","hr":"Igle i Vacutainer sistemi"},"Syringes":{"zh":"注射器","hr":"Šprice"},"Gloves":{"zh":"手套","hr":"Rukavice"},"Catheters":{"zh":"导管","hr":"Kateteri"},"Cotton":{"zh":"棉","hr":"Vata"},"Wound care":{"zh":"伤口护理","hr":"Zbrinjavanje rana"},"Plaster":{"zh":"石膏","hr":"Gips"},"Gynecology":{"zh":"妇科","hr":"Ginekologija"},"Dermatology":{"zh":"皮肤科","hr":"Dermatologija"},"Sample containers":{"zh":"标本容器","hr":"Posude za uzorke"},"Laboratory":{"zh":"实验室","hr":"Laboratorij"},"Acupuncture":{"zh":"针灸","hr":"Akupunktura"},"Pedicure":{"zh":"足疗","hr":"Pedikura"},"Soaps":{"zh":"肥皂","hr":"Sapuni"},"Infectious waste containers":{"zh":"感染性废物容器","hr":"Spremnici za infektivni otpad"},"Patient shaving":{"zh":"患者备皮","hr":"Brijanje pacijenata"},"Surgical gloves":{"zh":"手术手套","hr":"Kirurške rukavice"},"Surgical sutures":{"zh":"手术缝线","hr":"Kirurški konci"},"Surgical clothing & footwear":{"zh":"手术衣与鞋","hr":"Kirurška odjeća i obuća"},"Surgical drapes":{"zh":"手术铺单","hr":"Kirurške prekrivke"},"Surgical consumables":{"zh":"外科耗材","hr":"Potrošni materijal za kirurgiju"},"Bandages":{"zh":"绷带","hr":"Zavoji"},"Otolaryngology":{"zh":"耳鼻喉","hr":"Otorinolaringologija"},"Defibrillators / AED":{"zh":"除颤器 / AED","hr":"Defibrilatori / AED"},"Immobilization":{"zh":"固定","hr":"Imobilizacija"},"Stretchers, gurneys":{"zh":"担架","hr":"Stretcheri, nosila"},"Emergency bags":{"zh":"急救包","hr":"Torbe za hitnu pomoć"},"Intubation":{"zh":"插管","hr":"Intubacija"},"Laryngoscopes":{"zh":"喉镜","hr":"Laringoskopi"},"Resuscitation":{"zh":"复苏","hr":"Reanimacija"},"Aspirators":{"zh":"吸引器","hr":"Aspiratori"},"Veterinary instruments":{"zh":"兽医器械","hr":"Veterinarski instrumenti"},"Veterinary":{"zh":"兽医","hr":"Veterina"},"Medical aids":{"zh":"医疗辅助用品","hr":"Medicinska pomagala"},"Personal care":{"zh":"个人护理","hr":"Osobna njega"},"Breathing aids":{"zh":"呼吸辅助","hr":"Pomagala za disanje"},"Inhalers":{"zh":"雾化吸入器","hr":"Inhalatori"},"Kinesiology tape":{"zh":"肌内效贴布","hr":"Kineziološke trake"},"Physiotherapy":{"zh":"理疗","hr":"Fizioterapija"},"Rinsing solutions":{"zh":"冲洗液","hr":"Otopine za ispiranje"},"Cosmetic products":{"zh":"化妆品","hr":"Kozmetički proizvodi"},"Patient care":{"zh":"患者护理","hr":"Njega bolesnika"},"Gua sha":{"zh":"刮痧","hr":"Gua sha"},"First aid":{"zh":"急救","hr":"Prva pomoć"},"Disinfectants":{"zh":"消毒剂","hr":"Dezinficijensi"},"Medical clothing":{"zh":"医用服装","hr":"Medicinska odjeća"},"Protective masks":{"zh":"防护口罩","hr":"Zaštitne maske"},"B. Braun products":{"zh":"B. Braun 产品","hr":"B. Braun sredstva"},"Hygiene aids":{"zh":"卫生用品","hr":"Higijenska pomagala"},"Books":{"zh":"书籍","hr":"Knjige"}}};
 
 const uid=p=>(p||'')+Math.random().toString(36).slice(2,9);
@@ -476,9 +489,9 @@ function show(v){
 document.getElementById('nav').addEventListener('click',e=>{if(e.target.dataset.v)show(e.target.dataset.v)});
 
 /* ---------- render: dashboard ---------- */
-function renderAll(){fillFilters();paintBrand();renderProducts();renderSuppliers();renderBuyers();renderTransport();renderRequests();renderDash();translateUI(document)}
+function renderAll(){fillFilters();paintBrand();renderProducts();renderSuppliers();renderBuyers();renderTransport();renderRequests();renderDash();updateSectionToggle();const _pt=document.querySelector('#v-products .title');if(_pt)_pt.textContent=(SECTION==='hotel')?'Hotel Supply — products to source':'Products to source';translateUI(document)}
 function renderDash(){
-  const p=S.products;
+  const p=secProducts();
   const quoted=p.filter(x=>bestQuote(x.id)).length;
   const valQ=p.reduce((s,x)=>{const b=bestQuote(x.id);return s+(b&&x.qty?b.price*x.qty:0)},0);
   const cards=[[p.length,"Products","--accent"],[S.suppliers.length,"Suppliers","--accent2"],[S.buyers.length,"Buyers","--navy"],
@@ -491,7 +504,7 @@ function renderDash(){
   const todo=p.filter(x=>(x.status==='New'||x.status==='RFQ')&&!bestQuote(x.id)).slice(0,8);
   document.getElementById('todo').innerHTML=todo.length?`<table><tbody>${todo.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="muted" style="font-size:12px">${esc(x.ref||'')}</div></td><td><span class="tag ${catCls(x.category)}">${esc(x.category)}</span></td><td class="right"><button class="btn sm ghost" onclick="openProduct('${x.id}')">Open</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">Nothing pending. 🎉</div>`;
   const cc={};p.forEach(x=>cc[x.category]=(cc[x.category]||0)+1);
-  document.getElementById('byCat').innerHTML=CATS.filter(c=>cc[c.k]).map(c=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="tag ${c.cls}" style="min-width:150px">${c.k}</span><b>${cc[c.k]}</b><span class="muted">products</span></div>`).join('')||'<div class="empty">No products yet.</div>';
+  document.getElementById('byCat').innerHTML=Object.keys(cc).sort((a,b)=>String(a).localeCompare(String(b))).map(k=>`<div style="display:flex;align-items:center;gap:10px;margin:8px 0"><span class="tag ${catCls(k)}" style="min-width:150px">${esc(k)}</span><b>${cc[k]}</b><span class="muted">products</span></div>`).join('')||'<div class="empty">No products yet.</div>';
 }
 
 /* ---------- render: products ---------- */
@@ -499,19 +512,20 @@ function mcatOf(p){if(!p.specs)return '';return (p.specs.split(' · ')[0]||'').t
 function msubOf(p){if(!p.specs)return '';const s=(p.specs.split(' · ')[1]||'').trim();return (s&&!s.startsWith('Brand:')&&!s.startsWith('HR:'))?s:'';}
 function fillSubFilter(){
   const cat=document.getElementById('pmcat').value, cur=document.getElementById('pmsub').value;
-  const subs=[...new Set(S.products.filter(p=>!cat||mcatOf(p)===cat).map(msubOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const subs=[...new Set(secProducts().filter(p=>!cat||mcatOf(p)===cat).map(msubOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   document.getElementById('pmsub').innerHTML=`<option value="">${esc(Lz('All sub-categories'))}</option>`+subs.map(s=>`<option value="${esc(s)}" ${s===cur?'selected':''}>${esc(Lz(s))}</option>`).join('');
 }
 function catChanged(){document.getElementById('pmsub').value='';fillSubFilter();renderProducts();}
 function fillFilters(){
   const sel=id=>document.getElementById(id);
   const co=c=>`<option value="${esc(c)}">${esc(Lz(c))}</option>`;
-  sel('pcat').innerHTML=`<option value="">${esc(Lz('All categories'))}</option>`+CATS.map(c=>co(c.k)).join('');
+  const pcats=[...new Set(secProducts().map(p=>p.category).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+  sel('pcat').innerHTML=`<option value="">${esc(Lz('All categories'))}</option>`+pcats.map(c=>co(c)).join('');
   sel('impCat').innerHTML=CATS.map(c=>co(c.k)).join('');
   sel('rq_cat').innerHTML=CATS.map(c=>co(c.k)).join('');
   sel('pstat').innerHTML=`<option value="">${esc(Lz('All statuses'))}</option>`+STATUSES.map(s=>`<option value="${s}">${esc(Lz(STLABEL[s]))}</option>`).join('');
   sel('pbuyer').innerHTML=`<option value="">${esc(Lz('All buyers'))}</option>`+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
-  const curM=sel('pmcat').value, mcats=[...new Set(S.products.map(mcatOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const curM=sel('pmcat').value, mcats=[...new Set(secProducts().map(mcatOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   sel('pmcat').innerHTML=`<option value="">${esc(Lz('All categories'))}</option>`+mcats.map(m=>`<option value="${esc(m)}" ${m===curM?'selected':''}>${esc(Lz(m))}</option>`).join('');
   fillSubFilter();
   sel('expBuyer').innerHTML='<option value="">All buyers (full list)</option>'+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
@@ -521,6 +535,7 @@ function renderProducts(){
   const fc=document.getElementById('pcat').value,fs=document.getElementById('pstat').value,fb=document.getElementById('pbuyer').value;
   const fm=document.getElementById('pmcat').value,fsub=document.getElementById('pmsub').value,sortBy=document.getElementById('psort').value;
   let rows=S.products.filter(p=>{
+    if(!inSection(p))return false;
     if(fc&&p.category!==fc)return false;if(fs&&p.status!==fs)return false;if(fb&&p.buyerId!==fb)return false;
     if(fm&&mcatOf(p)!==fm)return false;
     if(fsub&&msubOf(p)!==fsub)return false;
@@ -558,12 +573,12 @@ document.getElementById('overlay').addEventListener('click',e=>{if(e.target.id==
 
 /* ---------- product CRUD ---------- */
 function openProduct(id){
-  const p=id?S.products.find(x=>x.id===id):{id:null,name:'',nameEn:'',nameZh:'',ref:'',category:'Medical',buyerId:'',qty:'',target:'',specs:'',image:'',url:'',status:'New',notes:''};
+  const p=id?S.products.find(x=>x.id===id):{id:null,name:'',nameEn:'',nameZh:'',ref:nextRef(SECTION),category:(SECTION==='hotel'?'':'Medical'),buyerId:'',qty:'',target:'',specs:'',image:'',url:'',status:'New',notes:''};
   const body=`<div class="fld"><label>Product name * (original)</label><input id="f_name" value="${esc(p.name)}"></div>
     <div class="grid2"><div class="fld"><label>Name (English)</label><input id="f_name_en" value="${esc(p.nameEn||'')}"></div>
     <div class="fld"><label>名称 (Chinese)</label><input id="f_name_zh" value="${esc(p.nameZh||'')}"></div></div>
     <div class="grid3"><div class="fld"><label>Reference</label><input id="f_ref" value="${esc(p.ref||'')}"></div>
-    <div class="fld"><label>Category</label><select id="f_cat">${CATS.map(c=>`<option ${c.k===p.category?'selected':''}>${c.k}</option>`).join('')}</select></div>
+    <div class="fld"><label>Category</label><select id="f_cat">${catOptions(p.category)}</select></div>
     <div class="fld"><label>Status</label><select id="f_status">${STATUSES.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STLABEL[s]}</option>`).join('')}</select></div></div>
     <div class="grid3"><div class="fld"><label>Buyer</label><select id="f_buyer"><option value="">— none —</option>${S.buyers.map(b=>`<option value="${b.id}" ${b.id===p.buyerId?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
     <div class="fld"><label>Quantity</label><input id="f_qty" value="${esc(p.qty)}"></div>
