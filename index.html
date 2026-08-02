@@ -78,6 +78,7 @@
   .overlay.show{display:flex}
   .modal{background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
   .modal.wide{max-width:1120px}
+  body.hideref .refcol{display:none}
   input.qe{border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;box-sizing:border-box}
   #qeTable th{position:sticky;top:0;background:#0f2740;color:#fff;font-weight:600;font-size:11px;padding:6px 7px;white-space:nowrap}
   #qeTable td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -192,10 +193,11 @@
       <button class="btn sm" onclick="openRfqBuilder()">Build RFQ list ▸</button>
       <button class="btn sm green" onclick="openQuoteForm()">Enter quotes ▸</button>
       <button class="btn sm ghost" onclick="clearPicks()">Clear</button>
-      <span class="hint"><b>Build RFQ list</b> = blank sheet to send suppliers. <b>Enter quotes</b> = type in the prices they quoted back (a form ranked by REF).</span>
+      <label style="font-size:12px;display:inline-flex;align-items:center;gap:5px;margin-left:auto"><input type="checkbox" id="refToggle" onchange="toggleRef(this.checked)"> Show reference price</label>
+      <span class="hint" style="flex-basis:100%"><b>Build RFQ list</b> = blank sheet to send suppliers. <b>Enter quotes</b> = type in the prices they quoted back (a form ranked by REF).</span>
     </div>
     <div class="panel"><div class="pb" style="padding:0;overflow:auto">
-      <table><thead><tr><th style="width:26px"><input type="checkbox" id="pAll" onclick="pickAllVisible(this.checked)" title="Select all matching"></th><th>Ref</th><th>Product</th><th></th><th>Category</th><th>Buyer</th><th class="right">Qty</th><th class="right">Best quote</th><th class="right">Min. order</th><th>Status</th><th></th></tr></thead>
+      <table><thead><tr><th style="width:26px"><input type="checkbox" id="pAll" onclick="pickAllVisible(this.checked)" title="Select all matching"></th><th>Ref</th><th>Product</th><th></th><th>Category</th><th>Buyer</th><th class="right">Qty</th><th class="right refcol">Ref €</th><th class="right">Best quote</th><th class="right">Min. order</th><th>Status</th><th></th></tr></thead>
       <tbody id="pbody"></tbody></table><div id="pempty"></div></div></div>
   </section>
 
@@ -370,6 +372,10 @@ function setSection(s){SECTION=(s==='hotel')?'hotel':'medical';localStorage.setI
   const t=document.querySelector('#v-products .title');if(t)t.textContent=(SECTION==='hotel')?'Hotel Supply — products to source':'Products to source';}
 function nextRef(section){const pre=(section==='hotel')?'HOT-':'MED-';let max=0;S.products.forEach(p=>{const r=(p.ref||'').toUpperCase();if(r.startsWith(pre)){const n=parseInt(r.slice(4));if(!isNaN(n)&&n>max)max=n;}});return pre+String(max+1).padStart(4,'0');}
 function catOptions(selected){const set=new Set();if(SECTION==='medical')CATS.forEach(c=>set.add(c.k));secProducts().forEach(p=>{if(p.category)set.add(p.category);});if(selected)set.add(selected);return [...set].sort((a,b)=>String(a).localeCompare(String(b))).map(k=>`<option ${k===selected?'selected':''}>${esc(k)}</option>`).join('');}
+// reference price column (from product.target) — show/hide, also controls whether it's included in outputs
+let SHOWREF=localStorage.getItem('showref')==='1';
+function toggleRef(on){SHOWREF=!!on;localStorage.setItem('showref',SHOWREF?'1':'0');document.body.classList.toggle('hideref',!SHOWREF);}
+function applyRefUI(){document.body.classList.toggle('hideref',!SHOWREF);const rt=document.getElementById('refToggle');if(rt)rt.checked=SHOWREF;}
 let I18N={"cat":{"Diagnostics":{"zh":"诊断","hr":"Dijagnostika"},"Instruments":{"zh":"器械","hr":"Instrumenti"},"Office & practice":{"zh":"诊室设备","hr":"Ordinacija"},"Furniture":{"zh":"家具","hr":"Namještaj"},"Consumables":{"zh":"耗材","hr":"Potrošni materijal"},"Surgery":{"zh":"外科","hr":"Kirurgija"},"Emergency":{"zh":"急救","hr":"Hitna pomoć"},"Veterinary":{"zh":"兽医","hr":"Veterina"},"Home pharmacy":{"zh":"家庭药箱","hr":"Kućna ljekarna"},"Hygiene & protection":{"zh":"卫生与防护","hr":"Higijena i zaštita"},"Professional literature":{"zh":"专业文献","hr":"Stručna literatura"},"Other":{"zh":"其他","hr":"Ostalo"}},"sub":{"Stethoscopes":{"zh":"听诊器","hr":"Stetoskopi"},"Blood pressure monitors":{"zh":"血压计","hr":"Tlakomjeri"},"Otoscopes":{"zh":"耳镜","hr":"Otoskopi"},"Ophthalmoscopes":{"zh":"检眼镜","hr":"Oftalmoskopi"},"Dermatoscopes":{"zh":"皮肤镜","hr":"Dermatoskopi"},"Diagnostic lights":{"zh":"诊断灯","hr":"Dijagnostičke svjetiljke"},"Thermometers":{"zh":"体温计","hr":"Toplomjeri"},"ECG":{"zh":"心电图","hr":"EKG"},"Holter monitors":{"zh":"动态监测仪 (Holter)","hr":"Holteri"},"Blood & urine analysis":{"zh":"血液和尿液分析","hr":"Analiza krvi i urina"},"Rapid tests":{"zh":"快速检测","hr":"Brzi testovi"},"Audiometry":{"zh":"听力测定","hr":"Audiometrija"},"Spirometry":{"zh":"肺活量测定","hr":"Spirometrija"},"Pulse oximeters":{"zh":"脉搏血氧仪","hr":"Pulsni oksimetri"},"Ultrasound":{"zh":"超声","hr":"Ultrazvuk"},"CTG, Doppler":{"zh":"胎心监护 / 多普勒","hr":"CTG, Doppler"},"Anoscopes, colposcopes":{"zh":"肛门镜、阴道镜","hr":"Anoskopi, kolposkopi"},"Alcohol tester":{"zh":"酒精检测仪","hr":"Alkohol tester"},"Other diagnostics":{"zh":"其他诊断","hr":"Ostala dijagnostika"},"Patient monitors":{"zh":"生命体征监护仪","hr":"Monitori vitalnih funkcija"},"Dental medicine":{"zh":"牙科","hr":"Dentalna medicina"},"Dimeda instruments":{"zh":"Dimeda 器械","hr":"Dimeda instrumenti"},"Instrument sets":{"zh":"器械套装","hr":"Setovi instrumenata"},"Scissors":{"zh":"剪刀","hr":"Škare"},"Forceps & holders":{"zh":"镊子与钳","hr":"Pincete i hvatalice"},"Scalpels":{"zh":"手术刀","hr":"Skalpeli"},"Needle holders":{"zh":"持针器","hr":"Iglodržači"},"Aspiration cannulas":{"zh":"吸引套管","hr":"Aspiracijske kanile"},"Gynecological instruments":{"zh":"妇科器械","hr":"Ginekološki instrumenti"},"Other instruments":{"zh":"其他器械","hr":"Ostali instrumenti"},"Therapeutic devices":{"zh":"治疗设备","hr":"Terapijski uređaji"},"Electrosurgery":{"zh":"电外科","hr":"Elektrokirurgija"},"Oxygen for offices":{"zh":"诊室供氧","hr":"Kisik za ordinacije"},"Infusion":{"zh":"输液","hr":"Infuzija"},"Scales & height measures":{"zh":"体重秤与身高计","hr":"Vage i visinomjeri"},"Other measuring instruments":{"zh":"其他测量仪器","hr":"Ostali mjerni instrumenti"},"Lighting":{"zh":"照明","hr":"Rasvjeta"},"Lightboxes":{"zh":"阅片灯","hr":"Negatoskopi"},"Doctor's bags":{"zh":"出诊包","hr":"Liječničke torbe"},"Sterilization":{"zh":"灭菌","hr":"Sterilizacija"},"Ear rinsing":{"zh":"洗耳","hr":"Ispiranje uha"},"Anatomical models":{"zh":"解剖模型","hr":"Anatomski modeli"},"Laboratory equipment":{"zh":"实验室设备","hr":"Laboratorijska oprema"},"Throat spatulas":{"zh":"压舌板","hr":"Špatule za pregled grla"},"Stomach rinsing sets":{"zh":"洗胃套装","hr":"Setovi za ispiranje želuca"},"Wooden sticks":{"zh":"木棒","hr":"Drveni štapići"},"Office supplies":{"zh":"办公用品","hr":"Uredski pribor"},"Watches":{"zh":"计时器","hr":"Satovi"},"Examination beds":{"zh":"检查床","hr":"Pregledni ležajevi"},"Patient transport carts":{"zh":"患者转运车","hr":"Transportna kolica za pacijente"},"Screens":{"zh":"屏风","hr":"Paravani"},"Steps":{"zh":"脚踏凳","hr":"Stepenice"},"Medical carts":{"zh":"医用推车","hr":"Medicinska kolica"},"Office cabinets":{"zh":"诊室柜","hr":"Ormari za ordinaciju"},"Filing cabinets":{"zh":"文件柜","hr":"Kartotečni ormari"},"Work chairs & tables":{"zh":"工作椅与桌","hr":"Radne stolice i stolovi"},"Pediatric furniture":{"zh":"儿科家具","hr":"Pedijatrijski namještaj"},"Patient bedside furniture":{"zh":"患者床头家具","hr":"Ormarići i stolići za pacijente"},"Needles & Vacutainer systems":{"zh":"针头与真空采血系统","hr":"Igle i Vacutainer sistemi"},"Syringes":{"zh":"注射器","hr":"Šprice"},"Gloves":{"zh":"手套","hr":"Rukavice"},"Catheters":{"zh":"导管","hr":"Kateteri"},"Cotton":{"zh":"棉","hr":"Vata"},"Wound care":{"zh":"伤口护理","hr":"Zbrinjavanje rana"},"Plaster":{"zh":"石膏","hr":"Gips"},"Gynecology":{"zh":"妇科","hr":"Ginekologija"},"Dermatology":{"zh":"皮肤科","hr":"Dermatologija"},"Sample containers":{"zh":"标本容器","hr":"Posude za uzorke"},"Laboratory":{"zh":"实验室","hr":"Laboratorij"},"Acupuncture":{"zh":"针灸","hr":"Akupunktura"},"Pedicure":{"zh":"足疗","hr":"Pedikura"},"Soaps":{"zh":"肥皂","hr":"Sapuni"},"Infectious waste containers":{"zh":"感染性废物容器","hr":"Spremnici za infektivni otpad"},"Patient shaving":{"zh":"患者备皮","hr":"Brijanje pacijenata"},"Surgical gloves":{"zh":"手术手套","hr":"Kirurške rukavice"},"Surgical sutures":{"zh":"手术缝线","hr":"Kirurški konci"},"Surgical clothing & footwear":{"zh":"手术衣与鞋","hr":"Kirurška odjeća i obuća"},"Surgical drapes":{"zh":"手术铺单","hr":"Kirurške prekrivke"},"Surgical consumables":{"zh":"外科耗材","hr":"Potrošni materijal za kirurgiju"},"Bandages":{"zh":"绷带","hr":"Zavoji"},"Otolaryngology":{"zh":"耳鼻喉","hr":"Otorinolaringologija"},"Defibrillators / AED":{"zh":"除颤器 / AED","hr":"Defibrilatori / AED"},"Immobilization":{"zh":"固定","hr":"Imobilizacija"},"Stretchers, gurneys":{"zh":"担架","hr":"Stretcheri, nosila"},"Emergency bags":{"zh":"急救包","hr":"Torbe za hitnu pomoć"},"Intubation":{"zh":"插管","hr":"Intubacija"},"Laryngoscopes":{"zh":"喉镜","hr":"Laringoskopi"},"Resuscitation":{"zh":"复苏","hr":"Reanimacija"},"Aspirators":{"zh":"吸引器","hr":"Aspiratori"},"Veterinary instruments":{"zh":"兽医器械","hr":"Veterinarski instrumenti"},"Veterinary":{"zh":"兽医","hr":"Veterina"},"Medical aids":{"zh":"医疗辅助用品","hr":"Medicinska pomagala"},"Personal care":{"zh":"个人护理","hr":"Osobna njega"},"Breathing aids":{"zh":"呼吸辅助","hr":"Pomagala za disanje"},"Inhalers":{"zh":"雾化吸入器","hr":"Inhalatori"},"Kinesiology tape":{"zh":"肌内效贴布","hr":"Kineziološke trake"},"Physiotherapy":{"zh":"理疗","hr":"Fizioterapija"},"Rinsing solutions":{"zh":"冲洗液","hr":"Otopine za ispiranje"},"Cosmetic products":{"zh":"化妆品","hr":"Kozmetički proizvodi"},"Patient care":{"zh":"患者护理","hr":"Njega bolesnika"},"Gua sha":{"zh":"刮痧","hr":"Gua sha"},"First aid":{"zh":"急救","hr":"Prva pomoć"},"Disinfectants":{"zh":"消毒剂","hr":"Dezinficijensi"},"Medical clothing":{"zh":"医用服装","hr":"Medicinska odjeća"},"Protective masks":{"zh":"防护口罩","hr":"Zaštitne maske"},"B. Braun products":{"zh":"B. Braun 产品","hr":"B. Braun sredstva"},"Hygiene aids":{"zh":"卫生用品","hr":"Higijenska pomagala"},"Books":{"zh":"书籍","hr":"Knjige"}}};
 
 const uid=p=>(p||'')+Math.random().toString(36).slice(2,9);
@@ -489,7 +495,7 @@ function show(v){
 document.getElementById('nav').addEventListener('click',e=>{if(e.target.dataset.v)show(e.target.dataset.v)});
 
 /* ---------- render: dashboard ---------- */
-function renderAll(){fillFilters();paintBrand();renderProducts();renderSuppliers();renderBuyers();renderTransport();renderRequests();renderDash();updateSectionToggle();const _pt=document.querySelector('#v-products .title');if(_pt)_pt.textContent=(SECTION==='hotel')?'Hotel Supply — products to source':'Products to source';translateUI(document)}
+function renderAll(){fillFilters();paintBrand();renderProducts();renderSuppliers();renderBuyers();renderTransport();renderRequests();renderDash();updateSectionToggle();applyRefUI();const _pt=document.querySelector('#v-products .title');if(_pt)_pt.textContent=(SECTION==='hotel')?'Hotel Supply — products to source':'Products to source';translateUI(document)}
 function renderDash(){
   const p=secProducts();
   const quoted=p.filter(x=>bestQuote(x.id)).length;
@@ -553,6 +559,7 @@ function renderProducts(){
       <td class="nowrap"><button class="btn sm ghost" onclick="openProduct('${p.id}')">Edit</button></td>
       <td><span class="tag ${catCls(p.category)}">${esc(p.category)}</span></td><td>${esc(buyerName(p.buyerId))}</td>
       <td class="right">${p.qty?Number(p.qty).toLocaleString():'—'}</td>
+      <td class="right refcol muted">${p.target!=null&&p.target!==''?money(p.target):'—'}</td>
       <td class="right ${b?'best':''}">${b?money(b.price):'—'}${b?`<div class="muted" style="font-size:11px;font-weight:400">${esc(supName(b.supplierId))}</div>`:''}</td>
       <td class="right">${b&&b.moq!=null?Number(b.moq).toLocaleString():'—'}</td>
       <td><span class="st st-${p.status}">${STLABEL[p.status]}</span></td>
@@ -922,6 +929,7 @@ function openQuoteForm(){
     <td>${i+1}</td><td class="muted" style="white-space:nowrap;font-weight:600">${esc(p.ref||'')}</td>
     <td>${p.image?`<img src="${esc(p.image)}" loading="lazy" style="width:38px;height:38px;object-fit:cover;border-radius:4px">`:''}</td>
     <td style="min-width:150px;font-size:12px">${esc(p.name)}</td>
+    <td class="right refcol muted" style="white-space:nowrap">${(p.target!=null&&p.target!=='')?money(p.target):'—'}</td>
     <td><input class="qe" data-f="qty" type="number" min="0" value="${p.qty!=null?p.qty:''}" oninput="qeRecalc()" style="width:60px;text-align:right"></td>
     <td><input class="qe" data-f="price" type="number" min="0" step="0.01" oninput="qeRecalc()" style="width:78px;text-align:right" placeholder="0.00"></td>
     <td><input class="qe" data-f="moq" style="width:66px"></td>
@@ -938,9 +946,9 @@ function openQuoteForm(){
     </div>
     <div style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px">
       <table id="qeTable" style="border-collapse:collapse;width:100%"><thead><tr>
-        <th>#</th><th>Ref</th><th>Img</th><th>Product</th><th>Qty</th><th>Unit price</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th><th class="right">Line</th>
+        <th>#</th><th>Ref</th><th>Img</th><th>Product</th><th class="right refcol">Ref €</th><th>Qty</th><th>Unit price</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th><th class="right">Line</th>
       </tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="10" class="right" style="padding:8px"><b>Grand total (<span id="qe_curl">EUR</span>)</b></td><td class="right" style="padding:8px"><b id="qe_total">—</b></td></tr></tfoot></table>
+      <tfoot><tr><td colspan="11" class="right" style="padding:8px"><b>Grand total (<span id="qe_curl">EUR</span>)</b></td><td class="right" style="padding:8px"><b id="qe_total">—</b></td></tr></tfoot></table>
     </div>
     <p class="hint" id="qe_msg" style="margin:8px 0 0"><b>${QE_ITEMS.length}</b> products, ranked by REF. Enter what the supplier quoted, then Save to app or export.</p>`;
   const foot=`<button class="btn ghost" onclick="closeModal()">Close</button>
@@ -995,9 +1003,11 @@ async function qeSave(){
 function qeDocHTML(){
   const cur=document.getElementById('qe_cur').value||'EUR';
   const sup=document.getElementById('qe_sup').value||'';const qref=document.getElementById('qe_ref').value||'';const qdate=document.getElementById('qe_date').value||'';
-  const rows=qeCollect();let gt=0;
+  const rows=qeCollect();let gt=0;const showRef=SHOWREF;
+  const refTH=showRef?'<th class="r">Ref €</th>':'';
   const body=rows.map((r,i)=>{const line=isNaN(r.price)?'':(r.qty*r.price);if(line!=='')gt+=line;
-    return `<tr><td>${i+1}</td><td>${esc(r.p.ref||'')}</td><td class="im">${r.p.image?`<img src="${esc(r.p.image)}">`:''}</td><td>${esc(r.p.name||'')}</td><td class="r">${esc(r.qtyStr||'')}</td><td class="r">${isNaN(r.price)?'':r.price.toFixed(2)}</td><td class="r">${line===''?'':line.toFixed(2)}</td><td>${esc(r.moq)}</td><td>${esc(r.lead)}</td><td>${esc(r.incoterm)}</td><td>${esc(r.remark)}</td></tr>`;}).join('');
+    const refTD=showRef?`<td class="r">${(r.p.target!=null&&r.p.target!=='')?Number(r.p.target).toFixed(2):''}</td>`:'';
+    return `<tr><td>${i+1}</td><td>${esc(r.p.ref||'')}</td><td class="im">${r.p.image?`<img src="${esc(r.p.image)}">`:''}</td><td>${esc(r.p.name||'')}</td>${refTD}<td class="r">${esc(r.qtyStr||'')}</td><td class="r">${isNaN(r.price)?'':r.price.toFixed(2)}</td><td class="r">${line===''?'':line.toFixed(2)}</td><td>${esc(r.moq)}</td><td>${esc(r.lead)}</td><td>${esc(r.incoterm)}</td><td>${esc(r.remark)}</td></tr>`;}).join('');
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quotation</title><style>
     body{font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif;color:#1a2433;padding:26px}
     h1{color:#0f2740;margin:0 0 4px}.meta{font-size:13px;color:#555;margin-bottom:14px}
@@ -1005,9 +1015,9 @@ function qeDocHTML(){
     th{background:#0f2740;color:#fff}.r{text-align:right}td.im{padding:2px}td.im img{width:60px;height:60px;object-fit:cover;border-radius:4px;display:block}tfoot td{font-weight:700;background:#eef5ff}</style></head><body>
     <h1>Quotation</h1>
     <div class="meta">Supplier: ${esc(sup||'—')} &nbsp;|&nbsp; Quote ref: ${esc(qref||'—')} &nbsp;|&nbsp; Date: ${esc(qdate||new Date().toISOString().slice(0,10))} &nbsp;|&nbsp; Currency: ${esc(cur)} &nbsp;|&nbsp; ✉ jarrodliu@hotmail.com</div>
-    <table><thead><tr><th>#</th><th>Ref</th><th>Image</th><th>Product</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Line</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Ref</th><th>Image</th><th>Product</th>${refTH}<th class="r">Qty</th><th class="r">Unit</th><th class="r">Line</th><th>MOQ</th><th>Lead</th><th>Incoterm</th><th>Remarks</th></tr></thead>
     <tbody>${body}</tbody>
-    <tfoot><tr><td colspan="6" class="r">Grand total (${esc(cur)})</td><td class="r">${gt.toFixed(2)}</td><td colspan="4"></td></tr></tfoot></table></body></html>`;
+    <tfoot><tr><td colspan="${showRef?7:6}" class="r">Grand total (${esc(cur)})</td><td class="r">${gt.toFixed(2)}</td><td colspan="4"></td></tr></tfoot></table></body></html>`;
 }
 function qeFname(ext){return 'quotation_'+((document.getElementById('qe_sup').value||'quote').replace(/\W+/g,'_'))+'_'+new Date().toISOString().slice(0,10)+'.'+ext;}
 function qeHTML(){const blob=new Blob([qeDocHTML()],{type:'text/html;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=qeFname('html');a.click();}
@@ -1016,12 +1026,16 @@ function ensureXLSX(cb){if(typeof XLSX!=='undefined')return cb();const s=documen
 function qeXLSX(){ ensureXLSX(()=>{
   const cur=document.getElementById('qe_cur').value||'EUR';
   const meta=[['QUOTATION'],['Supplier',document.getElementById('qe_sup').value],['Quote ref',document.getElementById('qe_ref').value],['Quote date',document.getElementById('qe_date').value],['Currency',cur],['Exported',new Date().toLocaleString()],[]];
-  const head=['Ref','Product','Image_URL','Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks'];
+  const showRef=SHOWREF;
+  const head=['Ref','Product','Image_URL'].concat(showRef?['Ref_Price']:[]).concat(['Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks']);
   const rows=qeCollect();let gt=0;
   const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2);if(line!=='')gt+=r.qty*r.price;
-    return [r.p.ref||'',r.p.name||'',r.p.image||'',r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.remark];});
-  const aoa=meta.concat([head],data,[['','','','','Grand total',+gt.toFixed(2),'','','','']]);
-  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:10},{wch:44},{wch:34},{wch:6},{wch:11},{wch:12},{wch:10},{wch:10},{wch:10},{wch:22}];
+    const base=[r.p.ref||'',r.p.name||'',r.p.image||''];
+    if(showRef)base.push((r.p.target!=null&&r.p.target!=='')?Number(r.p.target):'');
+    return base.concat([r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.remark]);});
+  const totRow=['','','']; if(showRef)totRow.push(''); totRow.push('Grand total',+gt.toFixed(2),'','','','');
+  const aoa=meta.concat([head],data,[totRow]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:10},{wch:44},{wch:34}].concat(showRef?[{wch:11}]:[]).concat([{wch:6},{wch:11},{wch:12},{wch:10},{wch:10},{wch:10},{wch:22}]);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Quotation');XLSX.writeFile(wb,qeFname('xlsx'));
 });}
 const RFQ_L={
