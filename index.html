@@ -591,12 +591,35 @@ function openProduct(id){
     <div class="fld"><label>Quantity</label><input id="f_qty" value="${esc(p.qty)}"></div>
     <div class="fld"><label>Target price (€)</label><input id="f_target" value="${esc(p.target)}"></div></div>
     <div class="fld"><label>Specs / requirements (description)</label><textarea id="f_specs" rows="2">${esc(p.specs||'')}</textarea></div>
-    <div class="grid2"><div class="fld"><label>Image URL</label><input id="f_image" value="${esc(p.image||'')}" placeholder="https://…"></div>
-    <div class="fld"><label>Product page URL</label><input id="f_url" value="${esc(p.url||'')}" placeholder="https://…"></div></div>
+    <div class="fld"><label>Product image (shows in the list &amp; quotation)</label>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <img id="f_imgprev" src="${esc(p.image||'')}" style="width:60px;height:60px;object-fit:cover;border:1px solid var(--line);border-radius:6px;background:#fff;${p.image?'':'display:none'}" onerror="this.style.display='none'">
+        <div style="flex:1">
+          <input id="f_image" value="${esc(p.image||'')}" placeholder="Paste image URL, or use Upload →" oninput="prodImgPrev()" style="width:100%">
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <label class="btn sm ghost" style="cursor:pointer;margin:0">⬆ Upload image<input type="file" accept="image/*" onchange="prodImgUpload(this)" style="display:none"></label>
+            <button type="button" class="btn sm ghost" onclick="prodImgRemove()">✕ Remove image</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fld"><label>Product page URL</label><input id="f_url" value="${esc(p.url||'')}" placeholder="https://…"></div>
     <div class="fld"><label>Notes</label><textarea id="f_notes" rows="2">${esc(p.notes||'')}</textarea></div>`;
   const foot=`${id?`<button class="btn danger" style="margin-right:auto" onclick="delProduct('${id}')">Delete product</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveProduct('${id||''}')">${id?'Save':'Add product'}</button>`;
   openModal(id?'Edit product':'Add product',body,foot);setTimeout(()=>document.getElementById('f_name').focus(),50);
 }
+function prodImgPrev(){const el=document.getElementById('f_image');const im=document.getElementById('f_imgprev');if(!im||!el)return;if(el.value){im.src=el.value;im.style.display='';}else{im.style.display='none';}}
+function prodImgRemove(){const el=document.getElementById('f_image');if(el){el.value='';prodImgPrev();}}
+function prodImgUpload(input){const f=input.files&&input.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const img=new Image();
+    img.onload=()=>{const max=560;let w=img.width,h=img.height;if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+      let durl;try{durl=c.toDataURL('image/jpeg',0.72);}catch(e){durl=rd.result;}
+      document.getElementById('f_image').value=durl;prodImgPrev();};
+    img.onerror=()=>alert('Could not read that image file.');
+    img.src=rd.result;};
+  rd.readAsDataURL(f);input.value='';}
 async function saveProduct(id){
   const name=val('f_name');if(!name){alert('Product name is required');return}
   const p={id:id||uid('p'),name,nameEn:val('f_name_en'),nameZh:val('f_name_zh'),ref:val('f_ref'),category:val('f_cat'),status:val('f_status'),buyerId:val('f_buyer'),qty:num(val('f_qty')),target:num(val('f_target')),specs:val('f_specs'),image:val('f_image'),url:val('f_url'),notes:val('f_notes')};
@@ -1032,7 +1055,8 @@ function qeXLSX(){ ensureXLSX(()=>{
   const head=['Ref','Product','Image_URL'].concat(showRef?['Ref_Price']:[]).concat(['Qty','Unit_Price','Line_Total','MOQ','Lead','Incoterm','Remarks']);
   const rows=qeCollect();let gt=0;
   const data=rows.map(r=>{const line=isNaN(r.price)?'':+(r.qty*r.price).toFixed(2);if(line!=='')gt+=r.qty*r.price;
-    const base=[r.p.ref||'',r.p.name||'',r.p.image||''];
+    const imgCell=(r.p.image&&!/^data:/i.test(r.p.image))?r.p.image:(r.p.image?'(embedded image)':'');
+    const base=[r.p.ref||'',r.p.name||'',imgCell];
     if(showRef)base.push((r.p.target!=null&&r.p.target!=='')?Number(r.p.target):'');
     return base.concat([r.qtyStr,isNaN(r.price)?'':+r.price.toFixed(2),line,r.moq,r.lead,r.incoterm,r.remark]);});
   const totRow=['','','']; if(showRef)totRow.push(''); totRow.push('Grand total',+gt.toFixed(2),'','','','');
