@@ -528,12 +528,15 @@ function catChanged(){document.getElementById('pmsub').value='';fillSubFilter();
 function fillFilters(){
   const sel=id=>document.getElementById(id);
   const co=c=>`<option value="${esc(c)}">${esc(Lz(c))}</option>`;
+  // remember current selections so a re-render (e.g. after saving a product) keeps your place
+  const curCat=sel('pcat').value, curStat=sel('pstat').value, curBuyer=sel('pbuyer').value;
   const pcats=[...new Set(secProducts().map(p=>p.category).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
   sel('pcat').innerHTML=`<option value="">${esc(Lz('All categories'))}</option>`+pcats.map(c=>co(c)).join('');
   sel('impCat').innerHTML=CATS.map(c=>co(c.k)).join('');
   sel('rq_cat').innerHTML=CATS.map(c=>co(c.k)).join('');
   sel('pstat').innerHTML=`<option value="">${esc(Lz('All statuses'))}</option>`+STATUSES.map(s=>`<option value="${s}">${esc(Lz(STLABEL[s]))}</option>`).join('');
   sel('pbuyer').innerHTML=`<option value="">${esc(Lz('All buyers'))}</option>`+S.buyers.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  sel('pcat').value=curCat; sel('pstat').value=curStat; sel('pbuyer').value=curBuyer;
   const curM=sel('pmcat').value, mcats=[...new Set(secProducts().map(mcatOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   sel('pmcat').innerHTML=`<option value="">${esc(Lz('All categories'))}</option>`+mcats.map(m=>`<option value="${esc(m)}" ${m===curM?'selected':''}>${esc(Lz(m))}</option>`).join('');
   fillSubFilter();
